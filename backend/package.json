@@ -6,6 +6,7 @@
   "scripts": {
     "test": "test"
   },
+  "type": "module",
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -16,6 +17,7 @@
     "typescript-eslint": "^8.24.1"
   },
   "devDependencies": {
-    "@types/node": "^22.13.14"
+    "@types/node": "^22.13.14",
+    "tsx": "^4.19.3"
   }
 }
