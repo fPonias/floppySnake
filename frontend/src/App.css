@@ -1,0 +1,52 @@
+#root {
+  padding: 2rem;
+}
+
+.input {
+    margin-bottom: 10px;
+}
+
+.label {
+    width: 100px;
+    display: inline-block;
+    vertical-align: top;
+}
+
+.sublabel {
+    font-size: small;
+    color: lightgrey;
+}
+
+.formItem {
+    width: 300px;
+}
+
+textarea.formItem {
+    height: 120px;
+}
+
+form {
+   padding-bottom: 10px;
+}
+
+form button {
+    border-width: 1px;
+    border-color: black;
+    padding: 6px 10px;
+}
+
+.comment {
+    border-top: solid 1px;
+    padding: 10px 0px;
+    width: 100%;
+}
+
+.comment .name {
+    font-weight: bold;
+    padding-right: 10px;
+}
+
+.comment .time {
+    font-style: italic;
+    font-size: 10pt;
+}

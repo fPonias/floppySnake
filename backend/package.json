@@ -1,0 +1,21 @@
+{
+  "name": "floppy-snake",
+  "version": "0.0.1",
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "nodemon": "^3.1.9",
+    "pg": "^8.14.1",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.14"
+  }
+}
