@@ -1,9 +1,19 @@
 import express, { response } from 'express';
 import { getRecentComments, createComment, getComment, deleteComment } from './database.ts';
+import morgan from 'morgan';
+import fs from 'fs';
+import path from 'path';
+
 const app = express()
 const port = 3003
 
 app.use(express.json())
+
+// create a write stream (in append mode)
+const accessLogStream = fs.createWriteStream(path.join("./logs/", 'access.log'), { flags: 'a' })
+
+// setup the logger
+app.use(morgan('common', { stream: accessLogStream }))
 
 app.use(express.static('dist'))
 
@@ -13,6 +23,10 @@ app.use(function (req, res, next) {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Access-Control-Allow-Headers');
     next();
 });
+
+app.get('/.well-known/pki-validation/1FDA0D95DDB3FBF952FEDFA2526D9F02.txt', (req, res) => {
+	res.status(200).send("hello world");
+})
 
 app.get('/', (req, res) => {
     getRecentComments()
