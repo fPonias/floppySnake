@@ -5,12 +5,18 @@ import fs from 'fs';
 import path from 'path';
 
 const app = express()
-const port = 3003
+const port = 80
 
 app.use(express.json())
 
+const now = new Date().getTime();
+const today = Math.floor(now / (3600 * 24 * 1000));
 // create a write stream (in append mode)
-const accessLogStream = fs.createWriteStream(path.join("./logs/", 'access.log'), { flags: 'a' })
+const fileName = 'access-' + today + '.log';
+const accessLogStream = fs.createWriteStream(
+	path.join("./logs/", fileName), 
+	{ flags: 'a' }
+)
 
 // setup the logger
 app.use(morgan('common', { stream: accessLogStream }))
@@ -24,8 +30,13 @@ app.use(function (req, res, next) {
     next();
 });
 
+const wellKnownContent = `DCFED0EFA645CA8FE804941CE4DD4BC7F3CBA688DAFD88388C6122591BDDF88F
+sectigo.com
+67ef73c346636`;
+
 app.get('/.well-known/pki-validation/1FDA0D95DDB3FBF952FEDFA2526D9F02.txt', (req, res) => {
-	res.status(200).send("hello world");
+	res.setHeader("Content-Type", "text/plain; charset=utf-8");
+	res.status(200).send(wellKnownContent);
 })
 
 app.get('/', (req, res) => {
