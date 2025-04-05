@@ -1,6 +1,9 @@
 import React, { JSX, useRef, useState } from "react";
-import { api } from "./env";
+import { api } from "../../env";
 import CommentEntry from "./CommentEntry";
+import { useCookies } from "react-cookie";
+import { CookieValues } from "./defs";
+
 
 interface FormArgs {
     replyTo?: CommentEntry | undefined,
@@ -9,13 +12,13 @@ interface FormArgs {
 }
 
 export function FormComponent({
-    replyTo = undefined, 
+    replyTo = undefined,
     active = true,
     onPosted = () => {}
 }:FormArgs):JSX.Element {
-    const [name, setName] = useState<string>("");
     const [comment, setComment] = useState<string>("");
-    const form = useRef<HTMLFormElement | null>(null);
+    const form = useRef<HTMLFormElement | null>(null); 
+    const [cookies, setCookie] = useCookies<"name", CookieValues>(["name"]);
 
     async function postComment(evt:React.MouseEvent) {
         evt.preventDefault();
@@ -23,7 +26,7 @@ export function FormComponent({
         const url = api + "/comment";
         let args = {
             comment: comment,
-            name: name,
+            name: cookies.name,
             parent: (replyTo) ? replyTo.id : null,
         };
 
@@ -39,6 +42,9 @@ export function FormComponent({
             });
 
             console.log("fetched " + JSON.stringify(res));
+
+            setComment("");
+
             onPosted();
         } catch (e) {
             console.log("failed to post comment " + JSON.stringify(e));
@@ -52,7 +58,7 @@ export function FormComponent({
             return;
         }
 
-        setName(newValue);
+        setCookie("name", newValue);
     }
 
     function validateAndSetComment(evt: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -74,7 +80,7 @@ export function FormComponent({
             <div className="input">
                 <div className="label">Name: </div>
                 <input className="formItem"
-                    name='name' value={name}
+                    name='name' value={cookies.name}
                     onChange={(evt) => { validateAndSetName(evt) }}
                 />
             </div>

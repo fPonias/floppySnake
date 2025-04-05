@@ -1,13 +1,8 @@
 import pkg from 'pg';
+import { dbArgs } from './env';
 const { Pool } = pkg;
 
-const pool = new Pool({
-  user: 'floppysnake',
-  host: 'localhost',
-  database: 'floppysnake',
-  password: 'aaAA11!!aa',
-  port: 5432,
-});
+const pool = new Pool(dbArgs);
 
 export const getRecentComments = async (after: number | null = null):Promise<any[]> => {
     try {

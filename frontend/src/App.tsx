@@ -7,7 +7,7 @@ import CommentEntry, { CommentEntries } from './CommentEntry';
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
     const [activeReply, setActiveReply] = useState<number | undefined>(undefined);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false); 
 
     useMount(() => {
         setLoading(true);
@@ -56,6 +56,7 @@ function App() {
         await CommentEntries.instance.getRecent();
         await CommentEntries.instance.sortTree();
         setComments(CommentEntries.instance.tree);
+        setActiveReply(undefined);
     }
 
     function renderReply(comment: CommentEntry) {
@@ -75,7 +76,7 @@ function App() {
                 const time = dateToAgo(comment.posted);
                 const name = (comment.name) ? comment.name : "anonymous coward";
                 return (<>
-                    <div className='comment' style={{ marginLeft: indent + "px" }}>
+                    <div className='comment' key={comment.id} style={{ marginLeft: indent + "px" }}>
                         <div className='header'><span className='name'>{name}</span><span className='time'>{time}</span></div>
                         <div className='message'><pre>{comment.comment}</pre></div>
                         <div className="reply" id={comment.id.toString()} onClick={(evt) => { replyClicked(evt) }}>

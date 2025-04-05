@@ -3,9 +3,21 @@ import { getRecentComments, createComment, getComment, deleteComment } from './d
 import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
+import https from 'https';
+import { sslCert, sslPrivate, port, sslEnabled } from './env';
 
 const app = express()
-const port = 3003
+
+const options = {
+    key: fs.readFileSync(sslPrivate),
+    cert: fs.readFileSync(sslCert),
+};
+
+if (sslEnabled) {
+    https.createServer(options, app).listen(port, function () {
+        console.log("Express server listening on port " + port);
+    });
+}
 
 app.use(express.json())
 
@@ -25,7 +37,10 @@ app.use(function (req, res, next) {
 });
 
 app.get('/.well-known/pki-validation/1FDA0D95DDB3FBF952FEDFA2526D9F02.txt', (req, res) => {
-	res.status(200).send("hello world");
+	const content = `DCFED0EFA645CA8FE804941CE4DD4BC7F3CBA688DAFD88388C6122591BDDF88F
+sectigo.com
+67ef73c346636`
+	res.status(200).send(content);
 })
 
 app.get('/', (req, res) => {
