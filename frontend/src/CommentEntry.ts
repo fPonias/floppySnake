@@ -1,4 +1,4 @@
-import { api } from "./env"
+import { api } from "../env"
 
 export default class CommentEntry {
     id: number

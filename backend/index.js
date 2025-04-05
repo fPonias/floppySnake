@@ -3,9 +3,21 @@ import { getRecentComments, createComment, getComment, deleteComment } from './d
 import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
+import https from 'https';
+import * as env from './env';
 
 const app = express()
-const port = 80
+
+const options = {
+    key: fs.readFileSync(env.sslPrivate),
+    cert: fs.readFileSync(env.sslCert),
+};
+
+if (sslEnabled) {
+    https.createServer(options, app).listen(port, function () {
+        console.log("Express server listening on port " + port);
+    });
+}
 
 app.use(express.json())
 
@@ -106,6 +118,6 @@ app.delete('/comment/:id', (req, res) => {
         })
 })
 
-app.listen(port, () => {
-    console.log(`App running on port ${port}.`)
+app.listen(env.port, () => {
+    console.log(`App running on port ${env.port}.`)
 })
