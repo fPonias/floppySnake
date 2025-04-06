@@ -91,14 +91,13 @@ app.get('/index.html', (req, res) => {
     getStatic('/index.html', res);
 });
 
-app.get('/floppySnake.js', (req, res) => {
-    console.log("static /floppySnake.js called")
-    const pth = path.join("./dist/assets"); 
+function findFirst(suffix, res) {
+    const pth = path.join("./dist/assets");
     try {
         fs.opendir(pth, (err, dir) => {
             let entry;
             while ((entry = dir.readSync()) != null) {
-                if (entry.name.endsWith('.js')) {
+                if (entry.name.endsWith(suffix)) {
                     getStatic("assets/" + entry.name, res);
                     return;
                 }
@@ -106,9 +105,19 @@ app.get('/floppySnake.js', (req, res) => {
 
             res.status(500).send(err);
         })
-    } catch(err) {
+    } catch (err) {
         res.status(500).send(err);
     }
+}
+
+app.get('/floppySnake.js', (req, res) => {
+    console.log("static /floppySnake.js called")
+    findFirst(".js", res);
+});
+
+app.get('/floppySnake.css', (req, res) => {
+    console.log("static /floppySnake.css called")
+    findFirst(".css", res)
 })
 
 app.get('/comment', (req, res) => {
