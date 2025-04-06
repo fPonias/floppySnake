@@ -23,6 +23,16 @@ export default class CommentEntry {
     };
 }
 
+export class CommentCountInfo {
+    min: number
+    count: number
+
+    constructor(row:any) {
+        this.min = row.min;
+        this.count = row.count;
+    }
+};
+
 export class CommentEntries {
     private static _instance:CommentEntries | null = null;
 
@@ -37,6 +47,9 @@ export class CommentEntries {
     newest = 0;
     map = new Map<number, CommentEntry>()
     tree:CommentEntry[] = [];
+    count = 0;
+    oldest = Number.MAX_VALUE;
+    oldestLoaded = Number.MAX_VALUE;
 
     constructor() {
     }
@@ -50,6 +63,13 @@ export class CommentEntries {
                 ret.push(new CommentEntry(item));
             }
         }
+
+        return ret;
+    }
+
+    private async parseCounts(data: Response): Promise<CommentCountInfo> {
+        const json = await data.json();
+        const ret = new CommentCountInfo(json);
 
         return ret;
     }
@@ -93,9 +113,39 @@ export class CommentEntries {
         this.tree = this.tree.sort((a, b) => { return b.posted - a.posted})
     }
 
-    async getRecent() {
+    async getCounts() {
         try {
-            const url = api + "/comment/after/" + this.newest;
+            const url = api + "/comment/count";
+            const json = await fetch(url);
+            const obj = await this.parseCounts(json);
+
+            this.oldest = obj.min;
+            this.count = obj.count;
+        } catch (err) {
+            console.log("failed to fetch comment counts " + JSON.stringify(err));
+            throw(err);
+        }
+    }
+
+    async getRecent() {
+        return this.getComments(api + "/comment");
+    }
+
+    async getNewest() {
+        return this.getComments(api + "/comment/after/" + this.newest);
+    }
+
+    async getOlder() {
+        return this.getComments(api + "/comment/before/" + this.oldestLoaded);
+    }
+
+    async getComments(url:string) {
+        try {
+            if (this.count == 0) {
+                this.getCounts();
+            }
+
+                
             const json = await fetch(url);
             const comments = await this.parseComments(json);
 
@@ -110,6 +160,10 @@ export class CommentEntries {
 
                 if (comment.updated > this.newest) {
                     this.newest = comment.updated;
+                }
+
+                if (comment.updated < this.oldestLoaded) {
+                    this.oldestLoaded = comment.updated;
                 }
             }
         } catch (err) {

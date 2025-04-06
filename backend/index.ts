@@ -1,5 +1,5 @@
 import express, { response } from 'express';
-import { getRecentComments, createComment, getComment, deleteComment } from './database.ts';
+import { getRecentComments, createComment, getComment, deleteComment, getCommentCount, getOlderComments, getTopComments } from './database';
 import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
@@ -55,8 +55,31 @@ app.get('/.well-known/pki-validation/1FDA0D95DDB3FBF952FEDFA2526D9F02.txt', (req
 	res.status(200).send(wellKnownContent);
 })
 
-app.get('/', (req, res) => {
-    getRecentComments()
+app.get('/comment', (req, res) => {
+    console.log("get comment called with " + JSON.stringify(req.body));
+    getTopComments()
+        .then(response => {
+            res.status(200).send(response);
+        })
+        .catch(error => {
+            res.status(500).send(error);
+        })
+})
+
+app.get('/comment/before/:before', (req, res) => {
+    console.log("get comment before called with " + JSON.stringify(req.params));
+    getOlderComments(req.params.before)
+        .then(response => {
+            res.status(200).send(response);
+        })
+        .catch(error => {
+            res.status(500).send(error);
+        })
+})
+
+app.get('/comment/count', (req, res) => {
+    console.log("get comment count called");
+    getCommentCount()
         .then(response => {
             res.status(200).send(response);
         })
@@ -66,6 +89,7 @@ app.get('/', (req, res) => {
 })
 
 app.get('/comment/after/:after', (req, res) => {
+    console.log("get comment after called with " + JSON.stringify(req.params));
     getRecentComments(req.params.after)
         .then(response => {
             res.status(200).send(response);
@@ -76,7 +100,7 @@ app.get('/comment/after/:after', (req, res) => {
 })
 
 app.get('/comment/:id', (req, res) => {
-    console.log("get comment called with " + JSON.stringify(req.body));
+    console.log("get comment called with " + JSON.stringify(req.params));
     getComment(req.params.id)
         .then(response => {
             res.status(200).send(response);

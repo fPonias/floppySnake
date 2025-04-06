@@ -87,7 +87,7 @@ export function FormComponent({
             <div className='input'>
                 <div className="label">
                     Comment:<br />
-                    <span className='sublabel'>({comment.length} / 4000)</span>
+                    <span className='sublabel'>({comment.length} / 400)</span>
                 </div>
                 <textarea name='comment' className='formItem'
                     value={comment}

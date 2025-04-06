@@ -11,7 +11,9 @@ function App() {
 
     useMount(() => {
         setLoading(true);
-        doUpdate().then(() => {setLoading(false)})
+        firstLoad().then(() => {
+            setLoading(false)
+        });
     });
 
     function dateToAgo(date: number): string {
@@ -52,6 +54,13 @@ function App() {
         }
     }
 
+    async function firstLoad() {
+        await CommentEntries.instance.getRecent();
+        await CommentEntries.instance.sortTree();
+        setComments(CommentEntries.instance.tree);
+        setActiveReply(undefined);
+    }
+
     async function doUpdate() {
         await CommentEntries.instance.getRecent();
         await CommentEntries.instance.sortTree();
@@ -59,11 +68,29 @@ function App() {
         setActiveReply(undefined);
     }
 
+    async function loadMore() {
+        await CommentEntries.instance.getOlder()
+        await CommentEntries.instance.sortTree();
+        setComments(CommentEntries.instance.tree);
+    }
+
     function renderReply(comment: CommentEntry) {
         if (activeReply == comment.id) {
             return (
-                <FormComponent active={comment.id == activeReply} replyTo={comment} onPosted={() => {doUpdate();}}/>
+                <FormComponent active={comment.id == activeReply} replyTo={comment} onPosted={() => {
+                    doUpdate();
+                }}/>
             )
+        }
+    }
+
+    function renderLoadMore() {
+        if (CommentEntries.instance.count < CommentEntries.instance.map.size) {
+            return (
+                <a onClick={() => {loadMore()}}>More ...</a> 
+            )
+        } else {
+            return (<></>)
         }
     }
 
@@ -98,6 +125,7 @@ function App() {
         <FormComponent onPosted={() => { doUpdate(); }} />
         <div className='comments'>
             {renderComments(0, comments)}
+            {renderLoadMore()}
         </div>
     </>)
 }
