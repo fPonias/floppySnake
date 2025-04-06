@@ -1,5 +1,8 @@
 import pkg from 'pg';
-import * as env from './env';
+import env2 from '../env';
+
+const env = (env2.default) ? env2.default : env2;
+
 const { Pool } = pkg;
 
 const pool = new Pool(env.dbArgs);

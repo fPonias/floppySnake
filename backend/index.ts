@@ -4,7 +4,9 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
-import env from '../env';
+import env2 from '../env';
+
+const env = (env2.default) ? env2.default : env2;
 
 console.log("env: " + JSON.stringify(env));
 
@@ -15,9 +17,9 @@ const options = {
     cert: fs.readFileSync(env.sslCert),
 };
 
-if (sslEnabled) {
-    https.createServer(options, app).listen(port, function () {
-        console.log("Express server listening on port " + port);
+if (env.sslEnabled) {
+    https.createServer(options, app).listen(env.port, function () {
+        console.log("Express server listening on port " + env.port);
     });
 }
 
