@@ -1,5 +1,5 @@
 import React, { JSX, useRef, useState } from "react";
-import { api } from "../env";
+import env from "../../env";
 import CommentEntry from "./CommentEntry";
 import { useCookies } from "react-cookie";
 import { CookieValues } from "./defs";
@@ -25,7 +25,7 @@ export function FormComponent({
     async function postComment(evt:React.MouseEvent) {
         evt.preventDefault();
 
-        const url = api + "/comment";
+        const url = env.api + "/comment";
         let args = {
             comment: comment,
             name: cookies.name,

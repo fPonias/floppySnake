@@ -20,7 +20,7 @@ export const getTopComments = async (postid: number): Promise<any[]> => {
 
 export const getRecentComments = async (postid: number, after: number):Promise<any[]> => {
     try {
-        const res = await pool.query("SELECT * FROM comment WHERE updated >= $1 && postid = $2 ORDER BY updated DESC LIMIT 1000", [after, postid]);
+        const res = await pool.query("SELECT * FROM comment WHERE updated >= $1 AND postid = $2 ORDER BY updated DESC LIMIT 1000", [after, postid]);
         return res.rows;
     } catch(err) {
         console.error(err);
@@ -31,7 +31,7 @@ export const getRecentComments = async (postid: number, after: number):Promise<a
 
 export const getOlderComments = async (postid: number, before: number): Promise<any[]> => {
     try {
-        const res = await pool.query("SELECT * FROM comment WHERE updated < $1 && postid = $2 ORDER BY updated DESC LIMIT 1000", [before, postid]);
+        const res = await pool.query("SELECT * FROM comment WHERE updated < $1 AND postid = $2 ORDER BY updated DESC LIMIT 1000", [before, postid]);
         return res.rows;
     } catch (err) {
         console.error(err);

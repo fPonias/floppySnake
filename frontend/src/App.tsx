@@ -3,12 +3,36 @@ import './App.css'
 import useMount from './useMount';
 import { FormComponent } from './Form';
 import CommentEntry, { CommentEntries } from './CommentEntry';
+import useWebSocket from 'react-use-websocket';
+import env from '../../env'
+import { WebSocketHook } from 'react-use-websocket/dist/lib/types';
 
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
     const [activeReply, setActiveReply] = useState<number | undefined>(undefined);
     const [loading, setLoading] = useState(false);
     const commentBackend = useRef<CommentEntries | null>(null);
+    const ws = useRef<WebSocketHook | undefined>(undefined)
+
+    ws.current = useWebSocket(env.socketUrl, {
+        onOpen: () => console.log('opened'),
+        shouldReconnect: (closeEvent) => true,
+        share: true,
+        onMessage: (evt) => {
+            console.log("received message " + JSON.stringify(evt.data));
+
+            const data = JSON.parse(evt.data);
+            const postid = data.postid;
+            const date = data.updated;
+            const commentBack = commentBackend.current;
+
+            if (!commentBack) { return; }
+
+            if (postid == commentBack.postid && date > commentBack.newest) {
+                doUpdate();
+            }
+        },
+    });
 
     useMount(() => {
         setLoading(true);
@@ -68,7 +92,7 @@ function App() {
     }
 
     async function doUpdate() {
-        await commentBackend.current?.getRecent();
+        await commentBackend.current?.getNewest();
         await commentBackend.current?.sortTree();
         setComments(commentBackend.current?.tree ?? []);
         setActiveReply(undefined);
@@ -83,9 +107,7 @@ function App() {
     function renderReply(comment: CommentEntry) {
         if (activeReply == comment.id) {
             return (
-                <FormComponent active={comment.id == activeReply} postid={commentBackend.current?.postid ?? 0} replyTo={comment} onPosted={() => {
-                    doUpdate();
-                }}/>
+                <FormComponent active={comment.id == activeReply} postid={commentBackend.current?.postid ?? 0} replyTo={comment}/>
             )
         }
     }
@@ -131,7 +153,7 @@ function App() {
     }
 
     return (<>
-        <FormComponent postid={commentBackend.current?.postid ?? 0} onPosted={() => { doUpdate(); }} />
+        <FormComponent postid={commentBackend.current?.postid ?? 0}/>
         <div className='comments'>
             {renderComments(0, comments)}
             {renderLoadMore()}
