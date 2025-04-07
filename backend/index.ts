@@ -223,7 +223,7 @@ app.delete('/comment/:id', (req, res) => {
 })
 
 app.get('/post/:url', (req, res) => {
-    console.log("get comment called with " + JSON.stringify(req.params));
+    console.log("get post called with " + JSON.stringify(req.params));
     const url = atob(req.params.url);
     getPost(url)
         .then(response => {
@@ -235,7 +235,7 @@ app.get('/post/:url', (req, res) => {
 });
 
 app.post('/post', (req, res) => {
-    console.log("post comment called with " + JSON.stringify(req.body));
+    console.log("post create called with " + JSON.stringify(req.body));
 
     const json = req.body;
     if (!json.url) {
@@ -247,12 +247,10 @@ app.post('/post', (req, res) => {
 
     createPost(json.url)
         .then(response => {
-            console.log("post comment successful");
-
             res.status(200).send(JSON.stringify({ id: response }));
         })
         .catch(error => {
-            console.log("post comment failed with " + JSON.stringify(error));
+            console.log("post create failed with " + JSON.stringify(error));
             res.status(500).send(error);
         })
 })
