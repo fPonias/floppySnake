@@ -146,11 +146,12 @@ export async function getPost(url: string):Promise<number | null> {
 
 export async function createPost(url: string): Promise<number | null> {
     try {
-        const text = "INSERT INTO post (url) VALUES ($1)";
+        const text = "INSERT INTO post (url) VALUES ($1) RETURNING id";
         const values = [url];
         const result = await pool.query(text, values);
+        console.log("create result " + JSON.stringify(result));
         if (result && result.rows) {
-            const ret = result.rows[0];
+            const ret = result.rows[0].id;
             return ret;
         }
     } catch (error) {
