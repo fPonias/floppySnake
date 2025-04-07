@@ -9,49 +9,40 @@ export default class MyWebSocket{
     private static _instance:MyWebSocket | undefined = undefined;
     static get instance():MyWebSocket {
         if (!this._instance) {
-            throw("MyWebSocket instance undefined");
+            throw("MyWebSocket not initialized with init()")
         }
 
-        return this._instance;
+        return MyWebSocket._instance!!;
     }
 
-    static init(server: any) {
-        MyWebSocket._instance = new MyWebSocket(server);
+    static init(server:any) { 
+        MyWebSocket.server = server;
+        MyWebSocket._instance = new MyWebSocket();
     }
 
-    wsServer:WebSocketServer
+    static server: any
+    server:WebSocketServer
+    wss:WebSocketServer
     
-    private constructor(server: any) {
+    private constructor() {
+        this.wss = new WebSocketServer({server: MyWebSocket.server});
         console.log("new mywebsocket created for port " + env.wsport)
-	this.wsServer = new WebSocketServer({ server });
 
-        this.wsServer.on("connection", (connection, request) => { this.onConnected(connection, request); });
+        this.wss.on('connection', this.onConnected);
 
-        server.listen(env.wsport, () => {
-            console.log(`WebSocket server is running on port ${env.wsport}`)
-        })
+        MyWebSocket.server.listen(env.wsport);
     }
 
-    private onConnected(connection, request) {
-        const uuid = v4()
-        this.connections[uuid] = connection
-        console.log(`${uuid} connected`)
-
-        connection.on("close", () => this.handleClose(uuid))
-    }
-
-    connections = {}
-
-    private handleClose(uuid) {
-        console.log(`${uuid} disconnected`)
-        delete this.connections[uuid]
+    private onConnected(ws) {
+        ws.on('error', console.error);
     }
 
     broadcast(postid: number, updated: number) {
-        Object.keys(this.connections).forEach((uuid) => {
-            const connection = this.connections[uuid]
-            const message = JSON.stringify({postid: postid, updated: updated});
-            connection.send(message)
-        })
+        const message = JSON.stringify({ postid: postid, updated: updated });
+        for (let client of this.wss.clients) {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(message, { binary: false });
+            }
+        };
     }
 }

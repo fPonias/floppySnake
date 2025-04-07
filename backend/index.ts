@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
-import http from 'http';
+import http, { WebSocket } from 'http';
 import env2 from '../env';
 import setupRouting from './routing';
 import MyWebSocket from './websocket';
@@ -20,9 +20,7 @@ function createServer(port) {
 
     let server;
     if (env.sslEnabled) {
-        server = https.createServer(options, app).listen(port, function () {
-            console.log("Express server listening on port " + env.port);
-        });
+        server = https.createServer(options, app);
     } else {
         server = http.createServer();
     }
@@ -59,6 +57,3 @@ app.listen(env.port, () => {
     console.log(`App running on port ${env.port}.`);
     MyWebSocket.init(server);
 })
-
-const wsServer = createServer(env.wsport);
-MyWebSocket.init(wsServer);
