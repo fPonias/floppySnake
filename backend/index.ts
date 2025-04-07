@@ -1,5 +1,15 @@
 import express, { response } from 'express';
-import { getRecentComments, createComment, getComment, deleteComment, getCommentCount, getOlderComments, getTopComments } from './database';
+import { 
+    getRecentComments, 
+    createComment, 
+    getComment, 
+    deleteComment, 
+    getCommentCount, 
+    getOlderComments, 
+    getTopComments, 
+    getPost, 
+    createPost 
+} from './database';
 import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
@@ -120,9 +130,9 @@ app.get('/floppySnake.css', (req, res) => {
     findFirst(".css", res)
 })
 
-app.get('/comment', (req, res) => {
+app.get('/comment/:postid', (req, res) => {
     console.log("get comment called with " + JSON.stringify(req.body));
-    getTopComments()
+    getTopComments(req.params.postid)
         .then(response => {
             res.status(200).send(response);
         })
@@ -131,9 +141,9 @@ app.get('/comment', (req, res) => {
         })
 })
 
-app.get('/comment/before/:before', (req, res) => {
+app.get('/comment/:postid/before/:before', (req, res) => {
     console.log("get comment before called with " + JSON.stringify(req.params));
-    getOlderComments(req.params.before)
+    getOlderComments(req.params.postid, req.params.before)
         .then(response => {
             res.status(200).send(response);
         })
@@ -142,9 +152,9 @@ app.get('/comment/before/:before', (req, res) => {
         })
 })
 
-app.get('/comment/count', (req, res) => {
+app.get('/comment/:postid/count', (req, res) => {
     console.log("get comment count called");
-    getCommentCount()
+    getCommentCount(req.params.postid)
         .then(response => {
             res.status(200).send(response);
         })
@@ -153,9 +163,9 @@ app.get('/comment/count', (req, res) => {
         })
 })
 
-app.get('/comment/after/:after', (req, res) => {
+app.get('/comment/:postid/after/:after', (req, res) => {
     console.log("get comment after called with " + JSON.stringify(req.params));
-    getRecentComments(req.params.after)
+    getRecentComments(req.params.postid, req.params.after)
         .then(response => {
             res.status(200).send(response);
         })
@@ -189,8 +199,9 @@ app.post('/comment', (req, res) => {
     const name = json.name ?? null;
     const parent = json.parent ?? null;
     const ip = "";
+    const postid = json.postid ?? 0;
 
-    createComment(comment, name, ip, parent)
+    createComment(comment, name, ip, postid, parent)
         .then(response => {
             console.log("post comment successful");
             res.status(200).send(response);
@@ -207,6 +218,41 @@ app.delete('/comment/:id', (req, res) => {
             res.status(200).send(response);
         })
         .catch(error => {
+            res.status(500).send(error);
+        })
+})
+
+app.get('/post/:url', (req, res) => {
+    console.log("get comment called with " + JSON.stringify(req.params));
+    const url = atob(req.params.url);
+    getPost(url)
+        .then(response => {
+            res.status(200).send(JSON.stringify({id: response}));
+        })
+        .catch(error => {
+            res.status(500).send(error);
+        })
+});
+
+app.post('/post', (req, res) => {
+    console.log("post comment called with " + JSON.stringify(req.body));
+
+    const json = req.body;
+    if (!json.url) {
+        console.log("post url empty.");
+        res.status(500).send();
+        return;
+    }
+
+
+    createPost(json.url)
+        .then(response => {
+            console.log("post comment successful");
+
+            res.status(200).send(JSON.stringify({ id: response }));
+        })
+        .catch(error => {
+            console.log("post comment failed with " + JSON.stringify(error));
             res.status(500).send(error);
         })
 })

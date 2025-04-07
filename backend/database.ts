@@ -8,9 +8,9 @@ const { Pool } = pkg;
 
 const pool = new Pool(env.dbArgs);
 
-export const getTopComments = async (): Promise<any[]> => {
+export const getTopComments = async (postid: number): Promise<any[]> => {
     try {
-        const res = await pool.query("SELECT * FROM comment ORDER BY updated DESC LIMIT 1000");
+        const res = await pool.query("SELECT * FROM comment WHERE postid = $1 ORDER BY updated DESC LIMIT 1000", [postid]);
         return res.rows;
     } catch (err) {
         console.error(err);
@@ -18,9 +18,9 @@ export const getTopComments = async (): Promise<any[]> => {
     }
 }
 
-export const getRecentComments = async (after: number):Promise<any[]> => {
+export const getRecentComments = async (postid: number, after: number):Promise<any[]> => {
     try {
-        const res = await pool.query("SELECT * FROM comment WHERE updated >= $1 ORDER BY updated DESC LIMIT 1000", [after]);
+        const res = await pool.query("SELECT * FROM comment WHERE updated >= $1 && postid = $2 ORDER BY updated DESC LIMIT 1000", [after, postid]);
         return res.rows;
     } catch(err) {
         console.error(err);
@@ -29,9 +29,9 @@ export const getRecentComments = async (after: number):Promise<any[]> => {
 };
 
 
-export const getOlderComments = async (before: number): Promise<any[]> => {
+export const getOlderComments = async (postid: number, before: number): Promise<any[]> => {
     try {
-        const res = await pool.query("SELECT * FROM comment WHERE updated < $1 ORDER BY updated DESC LIMIT 1000", [before]);
+        const res = await pool.query("SELECT * FROM comment WHERE updated < $1 && postid = $2 ORDER BY updated DESC LIMIT 1000", [before, postid]);
         return res.rows;
     } catch (err) {
         console.error(err);
@@ -77,12 +77,12 @@ export const updateParent = async (id: number, date: number, failsafe: number = 
     }
 }
 
-export const createComment = async (comment:string, name: string | null, ip: string, parent:number | null):Promise<CommentEntry | null> => {
+export const createComment = async (comment:string, name: string | null, ip: string, postid: number, parent:number | null):Promise<CommentEntry | null> => {
     try {
         const now = new Date().getTime();
         const short = comment.substring(0, 400);
-        const text = "INSERT INTO comment (parent, posted, updated, comment, name, ip) VALUES ($1, $2, $3, $4, $5, $6)";
-        const values = [parent, now, now, short, name, ip];
+        const text = "INSERT INTO comment (parent, posted, updated, comment, name, ip, postid) VALUES ($1, $2, $3, $4, $5, $6, $7)";
+        const values = [parent, now, now, short, name, ip, postid];
         const result = await pool.query(text, values);
         if (result && result.rows) {
             const ret = result.rows[0];
@@ -115,13 +115,48 @@ export interface CommentCountInfo {
     count: Number;
 };
 
-export async function getCommentCount():Promise<CommentCountInfo | null> {
+export async function getCommentCount(postid: number):Promise<CommentCountInfo | null> {
     try {
-        const result = await pool.query("SELECT COUNT(id), MIN(updated) FROM comment");
+        const result = await pool.query("SELECT COUNT(id), MIN(updated) FROM comment WHERE postid = $1", [postid]);
         console.log("count response " + JSON.stringify(result.rows));
         return {min: Number.parseInt(result.rows[0].min), count: Number.parseInt(result.rows[0].count)};
     } catch(error) {
         console.error(error);
         throw new Error("Internal server error");
     }
+}
+
+export async function getPost(url: string):Promise<number | null> {
+    try {
+        const result = await pool.query("SELECT id FROM post WHERE url = $1", [url]);
+        console.log("post response " + JSON.stringify(result.rows));
+
+        if (result.rows.length > 0) {
+            return result.rows[0].id;
+        } else { 
+            return null;
+        }
+    } catch(error) {
+        console.error(error);
+        throw new Error("Internal server error");
+    }
+
+    return null;
+}
+
+export async function createPost(url: string): Promise<number | null> {
+    try {
+        const text = "INSERT INTO post (url) VALUES ($1)";
+        const values = [url];
+        const result = await pool.query(text, values);
+        if (result && result.rows) {
+            const ret = result.rows[0];
+            return ret;
+        }
+    } catch (error) {
+        console.error(error);
+        throw new Error("Internal server error");
+    }
+
+    return null;
 }

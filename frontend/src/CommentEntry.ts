@@ -34,16 +34,6 @@ export class CommentCountInfo {
 };
 
 export class CommentEntries {
-    private static _instance:CommentEntries | null = null;
-
-    static get instance():CommentEntries {
-        if (!CommentEntries._instance) {
-            CommentEntries._instance = new CommentEntries();
-        }
-
-        return CommentEntries._instance;
-    }
-
     newest = 0;
     map = new Map<number, CommentEntry>()
     tree:CommentEntry[] = [];
@@ -51,7 +41,11 @@ export class CommentEntries {
     oldest = Number.MAX_VALUE;
     oldestLoaded = Number.MAX_VALUE;
 
-    constructor() {
+    url: string = "";
+    postid: number = 0;
+
+    constructor(url: string) {
+        this.url = url;
     }
 
     private async parseComments(data: Response): Promise<CommentEntry[]> {
@@ -115,7 +109,7 @@ export class CommentEntries {
 
     async getCounts() {
         try {
-            const url = api + "/comment/count";
+            const url = api + "/comment/" + this.postid + "/count";
             const json = await fetch(url);
             const obj = await this.parseCounts(json);
 
@@ -128,15 +122,15 @@ export class CommentEntries {
     }
 
     async getRecent() {
-        return this.getComments(api + "/comment");
+        return this.getComments(api + "/comment/" + this.postid);
     }
 
     async getNewest() {
-        return this.getComments(api + "/comment/after/" + this.newest);
+        return this.getComments(api + "/comment/" + this.postid + "/after/" + this.newest);
     }
 
     async getOlder() {
-        return this.getComments(api + "/comment/before/" + this.oldestLoaded);
+        return this.getComments(api + "/comment/" + this.postid + "/before/" + this.oldestLoaded);
     }
 
     async getComments(url:string) {
@@ -168,6 +162,34 @@ export class CommentEntries {
             }
         } catch (err) {
             console.log("failed to fetch recent comments " + JSON.stringify(err));
+        }
+    }
+
+    async getPost() {
+        try {
+            const enc = btoa(this.url);
+            let url = api + "/post/" + enc;
+            let json = await fetch(url);
+            let data = await json.json();
+            
+            if (!data.id) {
+                url = api + "/post";
+                const body = JSON.stringify({url: this.url});
+                json = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: body
+                });
+                
+                data = await json.json();
+            }
+
+            this.postid = Number.parseInt(data.id);
+        } catch (err) {
+            console.log("failed to fetch post data " + JSON.stringify(err));
+            this.postid = 0;
         }
     }
 }

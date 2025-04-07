@@ -1,4 +1,4 @@
-import React, { JSX, useState } from 'react'
+import React, { JSX, useRef, useState } from 'react'
 import './App.css'
 import useMount from './useMount';
 import { FormComponent } from './Form';
@@ -7,10 +7,15 @@ import CommentEntry, { CommentEntries } from './CommentEntry';
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
     const [activeReply, setActiveReply] = useState<number | undefined>(undefined);
-    const [loading, setLoading] = useState(false); 
+    const [loading, setLoading] = useState(false);
+    const commentBackend = useRef<CommentEntries | null>(null);
 
     useMount(() => {
         setLoading(true);
+        if (commentBackend.current == null || commentBackend.current.url != document.URL) {
+            commentBackend.current = new CommentEntries(document.URL);
+        }
+
         firstLoad().then(() => {
             setLoading(false)
         });
@@ -55,29 +60,30 @@ function App() {
     }
 
     async function firstLoad() {
-        await CommentEntries.instance.getRecent();
-        await CommentEntries.instance.sortTree();
-        setComments(CommentEntries.instance.tree);
+        await commentBackend.current?.getPost();
+        await commentBackend.current?.getRecent();
+        await commentBackend.current?.sortTree();
+        setComments(commentBackend.current?.tree ?? []);
         setActiveReply(undefined);
     }
 
     async function doUpdate() {
-        await CommentEntries.instance.getRecent();
-        await CommentEntries.instance.sortTree();
-        setComments(CommentEntries.instance.tree);
+        await commentBackend.current?.getRecent();
+        await commentBackend.current?.sortTree();
+        setComments(commentBackend.current?.tree ?? []);
         setActiveReply(undefined);
     }
 
     async function loadMore() {
-        await CommentEntries.instance.getOlder()
-        await CommentEntries.instance.sortTree();
-        setComments(CommentEntries.instance.tree);
+        await commentBackend.current?.getOlder()
+        await commentBackend.current?.sortTree();
+        setComments(commentBackend.current?.tree ?? []);
     }
 
     function renderReply(comment: CommentEntry) {
         if (activeReply == comment.id) {
             return (
-                <FormComponent active={comment.id == activeReply} replyTo={comment} onPosted={() => {
+                <FormComponent active={comment.id == activeReply} postid={commentBackend.current?.postid ?? 0} replyTo={comment} onPosted={() => {
                     doUpdate();
                 }}/>
             )
@@ -85,7 +91,10 @@ function App() {
     }
 
     function renderLoadMore() {
-        if (CommentEntries.instance.count < CommentEntries.instance.map.size) {
+        const count = commentBackend.current?.count ?? 0;
+        const map = commentBackend.current?.map;
+        const mapSz = map?.size ?? 0;
+        if (count > mapSz) {
             return (
                 <a onClick={() => {loadMore()}}>More ...</a> 
             )
@@ -122,7 +131,7 @@ function App() {
     }
 
     return (<>
-        <FormComponent onPosted={() => { doUpdate(); }} />
+        <FormComponent postid={commentBackend.current?.postid ?? 0} onPosted={() => { doUpdate(); }} />
         <div className='comments'>
             {renderComments(0, comments)}
             {renderLoadMore()}

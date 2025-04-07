@@ -8,11 +8,13 @@ import { CookieValues } from "./defs";
 interface FormArgs {
     replyTo?: CommentEntry | undefined,
     active?: boolean,
+    postid: number,
     onPosted?: () => void
 }
 
 export function FormComponent({
     replyTo = undefined,
+    postid,
     active = true,
     onPosted = () => {}
 }:FormArgs):JSX.Element {
@@ -27,6 +29,7 @@ export function FormComponent({
         let args = {
             comment: comment,
             name: cookies.name,
+            postid: postid,
             parent: (replyTo) ? replyTo.id : null,
         };
 
