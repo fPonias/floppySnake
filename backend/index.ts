@@ -53,7 +53,7 @@ app.use(function (req, res, next) {
 
 setupRouting(app)
 
+MyWebSocket.init(server);
 app.listen(env.port, () => {
     console.log(`App running on port ${env.port}.`);
-    MyWebSocket.init(server);
 })

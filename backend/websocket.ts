@@ -30,7 +30,7 @@ export default class MyWebSocket{
 
         this.wss.on('connection', this.onConnected);
 
-        MyWebSocket.server.listen(env.wsport);
+        MyWebSocket.server.listen(env.port);
     }
 
     private onConnected(ws) {
