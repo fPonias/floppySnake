@@ -12,19 +12,25 @@ const env = (env2.default) ? env2.default : env2;
 
 const app = express()
 
-const options = {
-    key: fs.readFileSync(env.sslPrivate),
-    cert: fs.readFileSync(env.sslCert),
-};
+function createServer(port) {
+    const options = {
+        key: fs.readFileSync(env.sslPrivate),
+        cert: fs.readFileSync(env.sslCert),
+    };
 
-let server;
-if (env.sslEnabled) {
-    server = https.createServer(options, app).listen(env.port, function () {
-        console.log("Express server listening on port " + env.port);
-    });
-} else {
-    server = http.createServer();
+    let server;
+    if (env.sslEnabled) {
+        server = https.createServer(options, app).listen(port, function () {
+            console.log("Express server listening on port " + env.port);
+        });
+    } else {
+        server = http.createServer();
+    }
+
+    return server;
 }
+
+const server = createServer(env.port);
 
 app.use(express.json())
 
@@ -53,4 +59,5 @@ app.listen(env.port, () => {
     console.log(`App running on port ${env.port}.`)
 })
 
-MyWebSocket.init(server);
+const wsServer = createServer(env.wsport);
+MyWebSocket.init(wsServer);

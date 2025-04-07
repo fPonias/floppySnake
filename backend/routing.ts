@@ -74,6 +74,7 @@ sectigo.com
                 };
 
                 res.status(500).send(err);
+                dir.closeSync();
             })
         } catch (err) {
             res.status(500).send(err);
