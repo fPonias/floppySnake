@@ -1,4 +1,4 @@
-import { api } from "../env"
+import env from "../../env"
 
 export default class CommentEntry {
     id: number
@@ -87,7 +87,7 @@ export class CommentEntries {
             }
 
             if (!this.map.has(comment.parent)) {
-                const url = api + "/comment/" + comment.parent;
+                const url = env.api + "/comment/" + comment.parent;
                 const res = await fetch(url);
                 const parent = await this.parseComment(res);
 
@@ -109,7 +109,7 @@ export class CommentEntries {
 
     async getCounts() {
         try {
-            const url = api + "/comment/" + this.postid + "/count";
+            const url = env.api + "/comment/" + this.postid + "/count";
             const json = await fetch(url);
             const obj = await this.parseCounts(json);
 
@@ -122,15 +122,15 @@ export class CommentEntries {
     }
 
     async getRecent() {
-        return this.getComments(api + "/comment/" + this.postid);
+        return this.getComments(env.api + "/comment/" + this.postid);
     }
 
     async getNewest() {
-        return this.getComments(api + "/comment/" + this.postid + "/after/" + this.newest);
+        return this.getComments(env.api + "/comment/" + this.postid + "/after/" + this.newest);
     }
 
     async getOlder() {
-        return this.getComments(api + "/comment/" + this.postid + "/before/" + this.oldestLoaded);
+        return this.getComments(env.api + "/comment/" + this.postid + "/before/" + this.oldestLoaded);
     }
 
     async getComments(url:string) {
@@ -168,12 +168,12 @@ export class CommentEntries {
     async getPost() {
         try {
             const enc = btoa(this.url);
-            let url = api + "/post/" + enc;
+            let url = env.api + "/post/" + enc;
             let json = await fetch(url);
             let data = await json.json();
             
             if (!data.id) {
-                url = api + "/post";
+                url = env.api + "/post";
                 const body = JSON.stringify({url: this.url});
                 json = await fetch(url, {
                     method: 'POST',
