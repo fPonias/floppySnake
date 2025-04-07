@@ -16,7 +16,7 @@ function App() {
 
     ws.current = useWebSocket(env.socketUrl, {
         onOpen: () => console.log('opened'),
-        shouldReconnect: (closeEvent) => true,
+        shouldReconnect: (_) => true,
         share: true,
         onMessage: (evt) => {
             console.log("received message " + JSON.stringify(evt.data));
