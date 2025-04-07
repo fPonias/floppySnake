@@ -91,6 +91,16 @@ sectigo.com
         findFirst(".css", res)
     })
 
+    app.get(/\/assets\/index(.*)\.js/, (req, res, next) => {
+        console.log("static /assets/index.js called")
+        findFirst(".js", res);
+    });
+
+    app.get(/\/assets\/index(.*)\.css/, (req, res, next) => {
+        console.log("static /assets/index.css called")
+        findFirst(".css", res)
+    })
+
     app.get('/comment/:postid', (req, res) => {
         console.log("get comment called with " + JSON.stringify(req.body));
         getTopComments(req.params.postid)

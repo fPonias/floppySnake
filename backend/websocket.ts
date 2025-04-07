@@ -22,7 +22,8 @@ export default class MyWebSocket{
     wsServer:WebSocketServer
     
     private constructor(server: any) {
-        this.wsServer = new WebSocketServer({ server });
+        console.log("new mywebsocket created for port " + env.wsport)
+	this.wsServer = new WebSocketServer({ server });
 
         this.wsServer.on("connection", (connection, request) => { this.onConnected(connection, request); });
 

@@ -56,7 +56,8 @@ app.use(function (req, res, next) {
 setupRouting(app)
 
 app.listen(env.port, () => {
-    console.log(`App running on port ${env.port}.`)
+    console.log(`App running on port ${env.port}.`);
+    MyWebSocket.init(server);
 })
 
 const wsServer = createServer(env.wsport);
