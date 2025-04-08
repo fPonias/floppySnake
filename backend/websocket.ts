@@ -5,44 +5,47 @@ import url from "url";
 
 const env = (env2.default) ? env2.default : env2;
 
-export default class MyWebSocket{
-    private static _instance:MyWebSocket | undefined = undefined;
-    static get instance():MyWebSocket {
+export default class MyWebSocket {
+    private static _instance: MyWebSocket | undefined = undefined;
+    static get instance(): MyWebSocket {
         if (!this._instance) {
-            throw("MyWebSocket not initialized with init()")
+            throw ("MyWebSocket instance undefined");
         }
 
-        return MyWebSocket._instance!!;
+        return this._instance;
     }
 
-    static init(server:any) { 
-        MyWebSocket.server = server;
-        MyWebSocket._instance = new MyWebSocket();
+    static init(wss: WebSocketServer) {
+        MyWebSocket._instance = new MyWebSocket(wss);
     }
 
-    static server: any
-    server:WebSocketServer
-    wss:WebSocketServer
-    
-    private constructor() {
-        this.wss = new WebSocketServer({server: MyWebSocket.server});
-        console.log("new mywebsocket created for port " + env.wsport)
+    wss: WebSocketServer
 
-        this.wss.on('connection', this.onConnected);
-
-        MyWebSocket.server.listen(env.port);
+    private constructor(wss: WebSocketServer) {
+        this.wss = wss;
+        this.wss.on("connection", (connection, request) => { this.onConnected(connection, request); });
     }
 
-    private onConnected(ws) {
-        ws.on('error', console.error);
+    private onConnected(connection, request) {
+        const uuid = v4()
+        this.connections[uuid] = connection
+        console.log(`${uuid} connected`)
+
+        connection.on("close", () => this.handleClose(uuid))
+    }
+
+    connections = {}
+
+    private handleClose(uuid) {
+        console.log(`${uuid} disconnected`)
+        delete this.connections[uuid]
     }
 
     broadcast(postid: number, updated: number) {
-        const message = JSON.stringify({ postid: postid, updated: updated });
-        for (let client of this.wss.clients) {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(message, { binary: false });
-            }
-        };
+        Object.keys(this.connections).forEach((uuid) => {
+            const connection = this.connections[uuid]
+            const message = JSON.stringify({ postid: postid, updated: updated });
+            connection.send(message)
+        })
     }
 }

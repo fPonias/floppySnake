@@ -1,9 +1,10 @@
 import express, { response } from 'express';
+import {default as ws} from 'express-ws';
 import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
-import http, { WebSocket } from 'http';
+import http from 'http';
 import env2 from '../env';
 import setupRouting from './routing';
 import MyWebSocket from './websocket';
@@ -11,24 +12,19 @@ import MyWebSocket from './websocket';
 const env = (env2.default) ? env2.default : env2;
 
 const app = express()
+const expressWs = ws(app);
 
-function createServer(port) {
-    const options = {
-        key: fs.readFileSync(env.sslPrivate),
-        cert: fs.readFileSync(env.sslCert),
-    };
+const options = {
+    key: fs.readFileSync(env.sslPrivate),
+    cert: fs.readFileSync(env.sslCert),
+};
 
-    let server;
-    if (env.sslEnabled) {
-        server = https.createServer(options, app);
-    } else {
-        server = http.createServer();
-    }
-
-    return server;
+let server;
+if (env.sslEnabled) {
+    server = https.createServer(options, app)
+} else {
+    server = http.createServer({}, app);
 }
-
-const server = createServer(env.port);
 
 app.use(express.json())
 
@@ -37,8 +33,8 @@ const today = Math.floor(now / (3600 * 24 * 1000));
 // create a write stream (in append mode)
 const fileName = 'access-' + today + '.log';
 const accessLogStream = fs.createWriteStream(
-	path.join("./logs/", fileName), 
-	{ flags: 'a' }
+    path.join("./logs/", fileName),
+    { flags: 'a' }
 )
 
 // setup the logger
@@ -53,7 +49,12 @@ app.use(function (req, res, next) {
 
 setupRouting(app)
 
-MyWebSocket.init(server);
+app.ws('/', function (ws, req) {
+    console.log("web socket root called");
+})
+const wss = expressWs.getWss();
+MyWebSocket.init(wss);
+
 app.listen(env.port, () => {
-    console.log(`App running on port ${env.port}.`);
+    console.log(`App running on port ${env.port}.`)
 })
