@@ -28,24 +28,32 @@ export default class MyWebSocket {
 
     private onConnected(connection, request) {
         const uuid = v4()
-        this.connections[uuid] = connection
+        this.connections.set(uuid, connection);
         console.log(`${uuid} connected`)
 
         connection.on("close", () => this.handleClose(uuid))
+
+        console.log("sending api token " + uuid);
+        connection.send(JSON.stringify({token: uuid}));
     }
 
-    connections = {}
+    isLoggedIn(token) {
+        return this.connections.has(token);
+    }
+
+    connections = new Map<string, any>();
 
     private handleClose(uuid) {
         console.log(`${uuid} disconnected`)
-        delete this.connections[uuid]
+        this.connections.delete(uuid);
     }
 
     broadcast(postid: number, updated: number) {
-        Object.keys(this.connections).forEach((uuid) => {
-            const connection = this.connections[uuid]
+        const keys = this.connections.keys();
+        for (let uuid of keys) {
+            const connection = this.connections.get(uuid);
             const message = JSON.stringify({ postid: postid, updated: updated });
             connection.send(message)
-        })
+        }
     }
 }

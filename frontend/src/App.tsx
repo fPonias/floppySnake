@@ -10,6 +10,7 @@ import { WebSocketHook } from 'react-use-websocket/dist/lib/types';
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
     const [activeReply, setActiveReply] = useState<number | undefined>(undefined);
+    const [apiToken, setApiToken] = useState<string | null>(null);
 
     const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
     const [overflowing, setOverflowing] = useState<Set<number>>(new Set());
@@ -28,14 +29,19 @@ function App() {
             console.log("received message " + JSON.stringify(evt.data));
 
             const data = JSON.parse(evt.data);
-            const postid = data.postid;
-            const date = data.updated;
-            const commentBack = commentBackend.current;
 
-            if (!commentBack) { return; }
+            if (data.postid) {
+                const postid = data.postid;
+                const date = data.updated;
+                const commentBack = commentBackend.current;
 
-            if (postid == commentBack.postid && date > commentBack.newest) {
-                doUpdate();
+                if (!commentBack) { return; }
+
+                if (postid == commentBack.postid && date > commentBack.newest) {
+                    doUpdate();
+                }
+            } else if (data.token) {
+                setApiToken(data.token);
             }
         },
     });
@@ -113,7 +119,7 @@ function App() {
     function renderReply(comment: CommentEntry) {
         if (activeReply == comment.id) {
             return (
-                <FormComponent active={comment.id == activeReply} postid={commentBackend.current?.postid ?? 0} replyTo={comment}/>
+                <FormComponent active={comment.id == activeReply} postid={commentBackend.current?.postid ?? 0} replyTo={comment} token={apiToken}/>
             )
         }
     }
@@ -173,26 +179,29 @@ function App() {
     }, [comments, loading, expandedMessages]);
 
     function renderMessage(comment: CommentEntry) {
-        if (!overflowing.has(comment.id)) { return; }
-
         const id = comment.id;
-        const isExpanded = expandedMessages.has(id)
-        let messageClass = "message"
-        if (isExpanded) { messageClass += " expandedMessage"; }
 
-        let link;
-        if (expandedMessages.has(comment.id)) {
-            link = (
-                <a onClick={() => {
-                    setUpdateContractedMessage(id)}
-                }>Read less</a>
-            )
-        } else {
-            link = (
-                <a onClick={() => {
-                    setUpdateExpandedMessage(id)}
-                }>Read more</a>
-            )
+        let messageClass = "message"
+        let link = (<></>)
+        if (overflowing.has(comment.id)) {
+            const isExpanded = expandedMessages.has(id)
+            if (isExpanded) { messageClass += " expandedMessage"; }
+
+            if (expandedMessages.has(comment.id)) {
+                link = (
+                    <a onClick={() => {
+                        setUpdateContractedMessage(id)
+                    }
+                    }>Read less</a>
+                )
+            } else {
+                link = (
+                    <a onClick={() => {
+                        setUpdateExpandedMessage(id)
+                    }
+                    }>Read more</a>
+                )
+            }
         }
 
         return (<>
@@ -230,7 +239,7 @@ function App() {
 
 
     return (<>
-        <FormComponent postid={commentBackend.current?.postid ?? 0}/>
+        <FormComponent postid={commentBackend.current?.postid ?? 0} token={apiToken}/>
         <div className='comments'>
             {renderComments(0, comments)}
             {renderLoadMore()}

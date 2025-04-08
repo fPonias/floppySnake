@@ -9,14 +9,16 @@ interface FormArgs {
     replyTo?: CommentEntry | undefined,
     active?: boolean,
     postid: number,
-    onPosted?: () => void
+    onPosted?: () => void,
+    token?: string | null
 }
 
 export function FormComponent({
     replyTo = undefined,
     postid,
     active = true,
-    onPosted = () => {}
+    onPosted = () => {},
+    token = null
 }:FormArgs):JSX.Element {
     const [comment, setComment] = useState<string>("");
     const form = useRef<HTMLFormElement | null>(null); 
@@ -31,6 +33,7 @@ export function FormComponent({
             name: cookies.name,
             postid: postid,
             parent: (replyTo) ? replyTo.id : null,
+            token: token
         };
 
         const body = JSON.stringify(args);

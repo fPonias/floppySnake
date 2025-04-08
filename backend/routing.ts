@@ -190,8 +190,9 @@ sectigo.com
         const ip = "";
         const postid = json.postid ?? 0;
         const now = new Date().getTime();
+        const token = json.token
 
-        createComment(comment, name, ip, postid, parent)
+        createComment(token, comment, name, postid, parent)
             .then(response => {
                 console.log("post comment successful");
                 res.status(200).send(response);

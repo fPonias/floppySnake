@@ -1,6 +1,7 @@
 import pkg from 'pg';
 import env2 from '../env';
 import { response } from 'express';
+import MyWebSocket from './websocket';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -77,13 +78,34 @@ export const updateParent = async (id: number, date: number, failsafe: number = 
     }
 }
 
-export const createComment = async (comment:string, name: string | null, ip: string, postid: number, parent:number | null):Promise<CommentEntry | null> => {
+export const createComment = async (
+    token: string, 
+    comment:string, 
+    name: string | null,
+    postid: number, 
+    parent:number | null
+):Promise<CommentEntry | null> => {
     try {
+        if(!MyWebSocket.instance.isLoggedIn(token)) {
+            console.log("invalid user attempted to post comment");
+            throw new Error("invalid user attempt to post comment");
+        }
+
         const now = new Date().getTime();
+
+        let text = "SELECT updated FROM comment WHERE ip=$1 ORDER BY updated DESC LIMIT 1"
+        let result = await pool.query(text, [token]);
+        if (result.rows.length > 0) {
+            const diff = now - result.rows[0].updated;
+            if (diff < 1000) {
+                throw new Error("comment posted too quickly");
+            }
+        }
+
         const short = comment.substring(0, 400);
-        const text = "INSERT INTO comment (parent, posted, updated, comment, name, ip, postid) VALUES ($1, $2, $3, $4, $5, $6, $7)";
-        const values = [parent, now, now, short, name, ip, postid];
-        const result = await pool.query(text, values);
+        text = "INSERT INTO comment (parent, posted, updated, comment, name, ip, postid) VALUES ($1, $2, $3, $4, $5, $6, $7)";
+        const values = [parent, now, now, short, name, token, postid];
+        result = await pool.query(text, values);
         if (result && result.rows) {
             const ret = result.rows[0];
 
