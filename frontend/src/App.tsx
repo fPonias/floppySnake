@@ -1,4 +1,4 @@
-import React, { createElement, JSX, ReactNode, useEffect, useRef, useState } from 'react'
+import React, { JSX, useEffect, useRef, useState } from 'react'
 import './App.css'
 import useMount from './useMount';
 import { FormComponent } from './Form';
@@ -6,15 +6,16 @@ import CommentEntry, { CommentEntries } from './CommentEntry';
 import useWebSocket from 'react-use-websocket';
 import env from '../../env'
 import { WebSocketHook } from 'react-use-websocket/dist/lib/types';
-import { createRoot } from 'react-dom/client';
 
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
     const [activeReply, setActiveReply] = useState<number | undefined>(undefined);
+
     const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
     const [overflowing, setOverflowing] = useState<Set<number>>(new Set());
     const [updateExpandedMessage, setUpdateExpandedMessage] = useState<number>(-1);
     const [updateContractedMessage, setUpdateContractedMessage] = useState<number>(-1);
+    
     const [loading, setLoading] = useState(false);
     const commentBackend = useRef<CommentEntries | null>(null);
     const ws = useRef<WebSocketHook | undefined>(undefined)
