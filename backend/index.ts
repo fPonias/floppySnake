@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
+import {Server} from 'socket.io';
 import env2 from '../env';
 import setupRouting from './routing';
 import MyWebSocket from './websocket';
@@ -20,11 +21,13 @@ const options = {
 };
 
 let server;
+const io = new Server(server);
 if (env.sslEnabled) {
-    server = https.createServer(options, app)
+    server = https.createServer(options, app);
 } else {
     server = http.createServer(app);
 }
+io.listen(server);
 
 app.use(express.json())
 
