@@ -172,23 +172,33 @@ function App() {
         setOverflowing(arr);
     }, [comments, loading, expandedMessages]);
 
-    function renderReadMore(comment: CommentEntry) {
+    function renderMessage(comment: CommentEntry) {
         if (!overflowing.has(comment.id)) { return; }
 
         const id = comment.id;
+        const isExpanded = expandedMessages.has(id)
+        let messageClass = "message"
+        if (isExpanded) { messageClass += " expandedMessage"; }
+
+        let link;
         if (expandedMessages.has(comment.id)) {
-            return (
+            link = (
                 <a onClick={() => {
                     setUpdateContractedMessage(id)}
                 }>Read less</a>
             )
         } else {
-            return (
+            link = (
                 <a onClick={() => {
                     setUpdateExpandedMessage(id)}
                 }>Read more</a>
             )
         }
+
+        return (<>
+            <div className={messageClass}><pre>{comment.comment}</pre></div>
+            {link}
+        </>)
     }
 
     function renderComments(depth: number, commentsList: CommentEntry[]):JSX.Element {
@@ -199,14 +209,10 @@ function App() {
             {commentsList.map((comment) => {
                 const time = dateToAgo(comment.posted);
                 const name = (comment.name) ? comment.name : "anonymous coward";
-                const isExpanded = expandedMessages.has(comment.id)
-                let messageClass = "message"
-                if (isExpanded) { messageClass += " expandedMessage"; }
                 return (<>
                     <div className='comment' key={"comment-" + comment.id} id={comment.id.toString()} style={{ marginLeft: indent + "px" }}>
                         <div className='header'><span className='name'>{name}</span><span className='time'>{time}</span></div>
-                        <div className={messageClass}><pre>{comment.comment}</pre></div>
-                        {renderReadMore(comment)}
+                        {renderMessage(comment)}
                         <div className="reply" id={comment.id.toString()} onClick={(evt) => { replyClicked(evt) }}>
                             <a>Reply</a>
                         </div>
