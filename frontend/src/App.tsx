@@ -1,4 +1,4 @@
-import React, { JSX, useRef, useState } from 'react'
+import React, { createElement, JSX, ReactNode, useEffect, useRef, useState } from 'react'
 import './App.css'
 import useMount from './useMount';
 import { FormComponent } from './Form';
@@ -6,10 +6,15 @@ import CommentEntry, { CommentEntries } from './CommentEntry';
 import useWebSocket from 'react-use-websocket';
 import env from '../../env'
 import { WebSocketHook } from 'react-use-websocket/dist/lib/types';
+import { createRoot } from 'react-dom/client';
 
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
     const [activeReply, setActiveReply] = useState<number | undefined>(undefined);
+    const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
+    const [overflowing, setOverflowing] = useState<Set<number>>(new Set());
+    const [updateExpandedMessage, setUpdateExpandedMessage] = useState<number>(-1);
+    const [updateContractedMessage, setUpdateContractedMessage] = useState<number>(-1);
     const [loading, setLoading] = useState(false);
     const commentBackend = useRef<CommentEntries | null>(null);
     const ws = useRef<WebSocketHook | undefined>(undefined)
@@ -125,6 +130,66 @@ function App() {
         }
     }
 
+    useEffect(() => {
+        const idInt = updateContractedMessage;
+        if (idInt == -1) { return; }
+        if (!expandedMessages.has(idInt)) { return; }
+        expandedMessages.delete(idInt);
+
+        setExpandedMessages(new Set(expandedMessages));
+        setUpdateContractedMessage(-1);
+    }, [updateContractedMessage, expandedMessages])
+
+    useEffect(() => {
+        const idInt = updateExpandedMessage;
+        if (idInt == -1) { return; }
+        if (expandedMessages.has(idInt)) { return; }
+        expandedMessages.add(idInt);
+
+        setExpandedMessages(new Set(expandedMessages));
+        setUpdateExpandedMessage(-1);
+    }, [updateExpandedMessage, expandedMessages]);
+
+    useEffect(() => {
+        const messages = document.getElementsByClassName("message");
+        const arr = new Set<number>();
+        for (let element of messages) {
+            if (!element.parentElement) {
+                continue;
+            }
+
+            const id = element.parentElement?.id;
+            const idInt = Number.parseInt(id);
+            const isExpanded = expandedMessages.has(idInt);
+
+            if (element.scrollHeight > element.clientHeight || isExpanded) {
+                console.log("found overflowing message " + id);
+                arr.add(idInt);
+            }
+        }
+
+        setOverflowing(arr);
+    }, [comments, loading, expandedMessages]);
+
+    function renderReadMore(comment: CommentEntry) {
+        if (!overflowing.has(comment.id)) { return; }
+
+        const id = comment.id;
+        if (expandedMessages.has(comment.id)) {
+            return (
+                <a onClick={() => {
+                    setUpdateContractedMessage(id)}
+                }>Read less</a>
+            )
+        } else {
+            return (
+                <a onClick={() => {
+                    setUpdateExpandedMessage(id)}
+                }>Read more</a>
+            )
+        }
+    }
+
     function renderComments(depth: number, commentsList: CommentEntry[]):JSX.Element {
         if(commentsList.length == 0) {return (<></>)}
 
@@ -133,10 +198,14 @@ function App() {
             {commentsList.map((comment) => {
                 const time = dateToAgo(comment.posted);
                 const name = (comment.name) ? comment.name : "anonymous coward";
+                const isExpanded = expandedMessages.has(comment.id)
+                let messageClass = "message"
+                if (isExpanded) { messageClass += " expandedMessage"; }
                 return (<>
-                    <div className='comment' key={comment.id} style={{ marginLeft: indent + "px" }}>
+                    <div className='comment' key={"comment-" + comment.id} id={comment.id.toString()} style={{ marginLeft: indent + "px" }}>
                         <div className='header'><span className='name'>{name}</span><span className='time'>{time}</span></div>
-                        <div className='message'><pre>{comment.comment}</pre></div>
+                        <div className={messageClass}><pre>{comment.comment}</pre></div>
+                        {renderReadMore(comment)}
                         <div className="reply" id={comment.id.toString()} onClick={(evt) => { replyClicked(evt) }}>
                             <a>Reply</a>
                         </div>
@@ -151,6 +220,7 @@ function App() {
     if (loading) {
         return (<div>Loading ...</div>)
     }
+
 
     return (<>
         <FormComponent postid={commentBackend.current?.postid ?? 0}/>

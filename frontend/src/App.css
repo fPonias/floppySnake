@@ -50,3 +50,12 @@ form button {
     font-style: italic;
     font-size: 10pt;
 }
+
+.comment .message {
+    max-height: 100px;
+    overflow: hidden;
+}
+
+.comment .expandedMessage {
+    max-height: none;
+}
