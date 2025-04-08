@@ -5,10 +5,10 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
-import {Server} from 'socket.io';
 import env2 from '../env';
 import setupRouting from './routing';
 import MyWebSocket from './websocket';
+import {WebSocketServer} from 'ws';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -21,13 +21,11 @@ const options = {
 };
 
 let server;
-const io = new Server(server);
 if (env.sslEnabled) {
     server = https.createServer(options, app);
 } else {
     server = http.createServer(app);
 }
-io.listen(server);
 
 app.use(express.json())
 
@@ -52,12 +50,16 @@ app.use(function (req, res, next) {
 
 setupRouting(app)
 
-app.ws('/', function (ws, req) {
-    console.log("web socket root called");
-})
-const wss = expressWs.getWss();
-MyWebSocket.init(wss);
 
-app.listen(env.port, () => {
+server.listen(env.port, () => {
     console.log(`App running on port ${env.port}.`)
 })
+
+const wss = new WebSocketServer({ server: server });
+wss.on('connection', ws => {
+    console.log('Client connected.');
+    ws.send('Hi there!');
+});
+wss.on('message', msg => {
+    console.log('Client said: ' + msg.toString());
+});
