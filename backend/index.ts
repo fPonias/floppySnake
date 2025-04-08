@@ -23,7 +23,7 @@ let server;
 if (env.sslEnabled) {
     server = https.createServer(options, app)
 } else {
-    server = http.createServer({}, app);
+    server = http.createServer(app);
 }
 
 app.use(express.json())

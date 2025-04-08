@@ -11,7 +11,10 @@ import {
     getPost,
     createPost
 } from './database';
-import MyWebSocket from './websocket';
+import MyWebSocket from './websocket'; 
+import env2 from '../env';
+
+const env = (env2.default) ? env2.default : env2;
 
 export default function setupRouting(app:any) {
     const wellKnownContent = `DCFED0EFA645CA8FE804941CE4DD4BC7F3CBA688DAFD88388C6122591BDDF88F
@@ -61,6 +64,20 @@ sectigo.com
         getStatic('/index.html', res);
     });
 
+    app.get('/certificate.pem', (req, res) => {
+        console.log("certificate called");
+        fs.readFile(env.sslCert, (err, data) => {
+            if (err) {
+                res.status(500).send(err);
+                return;
+            }
+
+            let contentType = "application/x-pem-file";
+            res.setHeader("Content-Type", contentType);
+            res.status(200).send(data)
+        })
+    })
+
     function findFirst(suffix, res) {
         const pth = path.join("./dist/assets");
         try {
@@ -69,12 +86,13 @@ sectigo.com
                 while ((entry = dir.readSync()) != null) {
                     if (entry.name.endsWith(suffix)) {
                         getStatic("assets/" + entry.name, res);
+                        dir.closeSync();
                         return;
                     }
                 };
 
-                res.status(500).send(err);
                 dir.closeSync();
+                res.status(500).send(err);
             })
         } catch (err) {
             res.status(500).send(err);
