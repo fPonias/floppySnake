@@ -56,10 +56,4 @@ server.listen(env.port, () => {
 })
 
 const wss = new WebSocketServer({ server: server });
-wss.on('connection', ws => {
-    console.log('Client connected.');
-    ws.send('Hi there!');
-});
-wss.on('message', msg => {
-    console.log('Client said: ' + msg.toString());
-});
+MyWebSocket.init(wss)
