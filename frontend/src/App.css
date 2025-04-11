@@ -1,67 +1,67 @@
-#root {
+#minusOne {
   padding: 2rem;
 }
 
-.outer {
+#minusOne .outer {
     padding: 20px;
     background: white;
 }
 
-.input {
+#minusOne .input {
     margin-bottom: 10px;
 }
 
-.label {
+#minusOne .label {
     width: 100px;
     display: inline-block;
     vertical-align: top;
 }
 
-.sublabel {
+#minusOne .sublabel {
     font-size: small;
     color: lightgrey;
 }
 
-.formItem {
+#minusOne .formItem {
     width: 300px;
-    background: grey;
+    background: white;
 }
 
-textarea.formItem {
+#minusOne textarea.formItem {
     height: 120px;
 }
 
-form {
+#minusOne form {
    padding-bottom: 10px;
 }
 
-form button {
+#minusOne form button {
     border-width: 1px;
     border-color: black;
     padding: 6px 10px;
 }
 
-.comment {
+#minusOne .comment {
     border-top: solid 1px;
     padding: 10px 0px;
     width: 100%;
 }
 
-.comment .name {
+#minusOne .comment .name {
     font-weight: bold;
     padding-right: 10px;
 }
 
-.comment .time {
+#minusOne .comment .time {
     font-style: italic;
     font-size: 10pt;
 }
 
-.comment .message {
+#minusOne .comment .message {
     max-height: 100px;
     overflow: hidden;
 }
 
-.comment .expandedMessage {
+#minusOne .comment .expandedMessage {
     max-height: none;
 }
