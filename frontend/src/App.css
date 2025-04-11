@@ -9,6 +9,7 @@
 
 #minusOne .input {
     margin-bottom: 10px;
+    color: red;
 }
 
 #minusOne .label {
@@ -25,6 +26,7 @@
 #minusOne .formItem {
     width: 300px;
     background: white;
+    color: red;
 }
 
 #minusOne textarea.formItem {
@@ -39,6 +41,8 @@
     border-width: 1px;
     border-color: black;
     padding: 6px 10px;
+    background: white;
+    color: red;
 }
 
 #minusOne .comment {
@@ -60,6 +64,10 @@
 #minusOne .comment .message {
     max-height: 100px;
     overflow: hidden;
+}
+
+#minusOne .message pre {
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
 #minusOne .comment .expandedMessage {
