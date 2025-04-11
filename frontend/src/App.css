@@ -2,6 +2,11 @@
   padding: 2rem;
 }
 
+.outer {
+    padding: 20px;
+    background: white;
+}
+
 .input {
     margin-bottom: 10px;
 }
@@ -19,6 +24,7 @@
 
 .formItem {
     width: 300px;
+    background: grey;
 }
 
 textarea.formItem {

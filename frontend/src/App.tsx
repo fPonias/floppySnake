@@ -46,10 +46,18 @@ function App() {
         },
     });
 
+    function getSiteID():string {
+        const site = window.location.host;
+        const path = window.location.pathname;
+
+        return site + "/" + path;
+    }
+
     useMount(() => {
         setLoading(true);
-        if (commentBackend.current == null || commentBackend.current.url != document.URL) {
-            commentBackend.current = new CommentEntries(document.URL);
+        const siteid = getSiteID();
+        if (commentBackend.current == null || commentBackend.current.url != siteid) {
+            commentBackend.current = new CommentEntries(siteid);
         }
 
         firstLoad().then(() => {
@@ -72,13 +80,16 @@ function App() {
             return Math.floor(diff) + " seconds ago";
         } else if (diff <= hour) {
             const hr = Math.floor(diff / min);
-            return hr + " minutes ago";
+            if (hr == 1) { return "1 minute ago";}
+            else { return hr + " minutes ago" };
         } else if (diff <= day) {
             const dy = Math.floor(diff / hour);
-            return dy + " hours ago"; 
+            if (dy == 1) { return "1 hour ago"}
+            else { return dy + " hours ago"} 
         } else if (diff <= long) {
             const mo = Math.floor(diff / day);
-            return mo + " days ago";
+            if (mo == 1) { return "1 day ago"}
+            else {return mo + " days ago"}
         } else {
             return "long ago";
         }
@@ -238,13 +249,13 @@ function App() {
     }
 
 
-    return (<>
+    return (<div className='outer'>
         <FormComponent postid={commentBackend.current?.postid ?? 0} token={apiToken}/>
         <div className='comments'>
             {renderComments(0, comments)}
             {renderLoadMore()}
         </div>
-    </>)
+    </div>)
 }
 
 export default App
