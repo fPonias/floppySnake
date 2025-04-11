@@ -9,7 +9,7 @@
 
 #minusOne .input {
     margin-bottom: 10px;
-    color: red;
+    color: black;
 }
 
 #minusOne .label {
@@ -26,7 +26,7 @@
 #minusOne .formItem {
     width: 300px;
     background: white;
-    color: red;
+    color: black;
 }
 
 #minusOne textarea.formItem {
@@ -42,7 +42,7 @@
     border-color: black;
     padding: 6px 10px;
     background: white;
-    color: red;
+    color: black;
 }
 
 #minusOne .comment {
@@ -54,16 +54,19 @@
 #minusOne .comment .name {
     font-weight: bold;
     padding-right: 10px;
+    color: black;
 }
 
 #minusOne .comment .time {
     font-style: italic;
     font-size: 10pt;
+    color: black;
 }
 
 #minusOne .comment .message {
     max-height: 100px;
     overflow: hidden;
+    color: black;
 }
 
 #minusOne .message pre {
