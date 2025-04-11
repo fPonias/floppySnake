@@ -27,3 +27,4 @@ dist-ssr
 
 env-real.js
 env.js
+env.ts
