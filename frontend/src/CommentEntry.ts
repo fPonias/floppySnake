@@ -1,3 +1,4 @@
+import { Cookies } from "react-cookie"
 import env from "../../env"
 
 export default class CommentEntry {
@@ -190,6 +191,49 @@ export class CommentEntries {
         } catch (err) {
             console.log("failed to fetch post data " + JSON.stringify(err));
             this.postid = 0;
+        }
+    }
+
+    async requestAdmin(key: string):Promise<string> {
+        try {
+            const url = env.api + "/getAdmin/" + key;
+            const json = await fetch(url);
+            const decoder = new TextDecoder();
+            const arr = await json.bytes();
+            const str = decoder.decode(arr);
+            return str;
+        } catch (err) {
+            console.log("failed to obtain authorization " + JSON.stringify(err));
+        }
+
+        return "";
+    }
+
+    async verifyAdmin(token: string): Promise<boolean> {
+        try {
+            const url = env.api + "/isAdmin/" + token;
+
+            const json = await fetch(url);
+            const decoder = new TextDecoder();
+            const arr = await json.bytes();
+            const str = decoder.decode(arr);
+            return (str == 'true') ? true : false;
+        } catch (err) {
+            console.log("failed to verify authorization " + JSON.stringify(err));
+        }
+
+        return false;
+    }
+
+    async deletePost(id: number) {
+        try {
+            const url = env.api + "/comment/" + id;
+            const json = await fetch(url, {
+                method: 'DELETE',
+                credentials: "include"
+            });
+        } catch (err) {
+            console.log("failed to delete post entry " + JSON.stringify(err));
         }
     }
 }

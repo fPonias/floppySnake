@@ -123,13 +123,17 @@ export const createComment = async (
     }
 }
 
-export const deleteComment = async (id: number) => {
+export const deleteComment = async (id: number):Promise<number | null> => {
     try {
-        const result = await pool.query("UPDATE comment SET comment = $1, name = $2 WHERE id = $3", ["", "", id])
+        const now = new Date().getTime();
+        const result = await pool.query("UPDATE comment SET comment = $1, updated = $2 WHERE id = $3", ["[deleted]", now, id])
+        return now;
     } catch (error) {
         console.error(error);
         throw new Error("Internal server error");
     }
+
+    return null;
 }
 
 export interface CommentCountInfo {

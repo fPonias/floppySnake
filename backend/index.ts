@@ -5,10 +5,13 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
+import cors from 'cors';
 import env2 from '../env';
 import setupRouting from './routing';
 import MyWebSocket from './websocket';
 import {WebSocketServer} from 'ws';
+import { resetKey } from './adminKey';
+import cookieParser from 'cookie-parser';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -39,12 +42,22 @@ const accessLogStream = fs.createWriteStream(
 )
 
 // setup the logger
-app.use(morgan('common', { stream: accessLogStream }))
+app.use(morgan('common', { stream: accessLogStream }));
+
+app.use(cookieParser());
+app.use(cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+}));
+
+//setup auth keys
+resetKey();
 
 app.use(function (req, res, next) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Access-Control-Allow-Headers');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader("Access-Control-Expose-Headers", "Set-Cookie");
     next();
 });
 

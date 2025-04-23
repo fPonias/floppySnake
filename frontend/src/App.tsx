@@ -6,6 +6,8 @@ import CommentEntry, { CommentEntries } from './CommentEntry';
 import useWebSocket from 'react-use-websocket';
 import env from '../../env'
 import { WebSocketHook } from 'react-use-websocket/dist/lib/types';
+import { useCookies } from "react-cookie";
+import { CookieValues } from "./defs";
 
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
@@ -19,8 +21,11 @@ function App() {
     
     const [loading, setLoading] = useState(false);
     const commentBackend = useRef<CommentEntries | null>(null);
-    const ws = useRef<WebSocketHook | undefined>(undefined)
+    const ws = useRef<WebSocketHook | undefined>(undefined);
 
+    const [cookies, setCookie] = useCookies<"token", CookieValues>(["token"]);
+    const [adminEnabled, setAdminEnabled] = useState<boolean>(false);
+    
     ws.current = useWebSocket(env.socketUrl, {
         onOpen: () => console.log('opened'),
         shouldReconnect: (_) => true,
@@ -60,9 +65,18 @@ function App() {
             commentBackend.current = new CommentEntries(siteid);
         }
 
-        firstLoad().then(() => {
+        async function delayed() {
+            if (!commentBackend.current) {return}
+
+            if (cookies.token) {
+                const verified = await commentBackend.current.verifyAdmin(cookies.token);
+                setAdminEnabled(verified);
+            }
+
+            await firstLoad()
             setLoading(false)
-        });
+        }
+        delayed();
     });
 
     function dateToAgo(date: number): string {
@@ -104,6 +118,15 @@ function App() {
         } else {
             setActiveReply(id);
         }
+    }
+
+    async function deleteClicked(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+        const idStr = evt.currentTarget.id;
+        const id = Number.parseInt(idStr);
+
+        if (!adminEnabled) { return; }
+
+        await commentBackend.current?.deletePost(id);
     }
 
     async function firstLoad() {
@@ -236,6 +259,11 @@ function App() {
                         <div className="reply" id={comment.id.toString()} onClick={(evt) => { replyClicked(evt) }}>
                             <a>Reply</a>
                         </div>
+                        {!adminEnabled ? (<></>) : (
+                            <div className="delete" id={comment.id.toString()} onClick={(evt) => { deleteClicked(evt) }}>
+                                <a>Delete</a>
+                            </div>
+                        )}
                         {renderReply(comment)}
                     </div>
                     {renderComments(depth + 1, comment.children)}
@@ -244,13 +272,23 @@ function App() {
         </>);
     }
 
+    async function onAdminEnabled() {
+        if (!commentBackend.current) { return; }
+
+        const password = prompt('Password:')
+        const token = await commentBackend.current.requestAdmin(password ?? "");
+        
+        setAdminEnabled(token != null);
+        setCookie("token", token);
+    }
+
     if (loading) {
         return (<div>Loading ...</div>)
     }
 
 
     return (<div className='outer'>
-        <FormComponent postid={commentBackend.current?.postid ?? 0} token={apiToken}/>
+        <FormComponent postid={commentBackend.current?.postid ?? 0} token={apiToken} onAdminEnabled={(_) => onAdminEnabled()}/>
         <div className='comments'>
             {renderComments(0, comments)}
             {renderLoadMore()}

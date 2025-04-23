@@ -10,7 +10,9 @@ interface FormArgs {
     active?: boolean,
     postid: number,
     onPosted?: () => void,
-    token?: string | null
+    token?: string | null,
+    enableAdmin?: boolean,
+    onAdminEnabled?: (enabled: boolean) => void
 }
 
 export function FormComponent({
@@ -18,11 +20,16 @@ export function FormComponent({
     postid,
     active = true,
     onPosted = () => {},
-    token = null
+    token = null,
+    enableAdmin = false,
+    onAdminEnabled = (_) => {}
 }:FormArgs):JSX.Element {
     const [comment, setComment] = useState<string>("");
     const form = useRef<HTMLFormElement | null>(null); 
     const [cookies, setCookie] = useCookies<"name", CookieValues>(["name"]);
+    const [adminTaps, setAdminTaps] = useState<number>(0);
+    const nameLabel = useRef<HTMLDivElement | null>(null);
+    const commentLabel = useRef<HTMLDivElement | null>(null);
 
     async function postComment(evt:React.MouseEvent) {
         evt.preventDefault();
@@ -81,17 +88,44 @@ export function FormComponent({
         return (<></>);
     }
 
+    function onAdminTap(target:HTMLDivElement | null) {
+        switch(adminTaps) {
+            case 0:
+            case 2:
+            case 4:
+                if (target == nameLabel.current) {
+                    setAdminTaps(adminTaps + 1);
+                } else {
+                    setAdminTaps(0);
+                }
+                break;
+            case 1:
+            case 3:
+                if (target == commentLabel.current) {
+                    setAdminTaps(adminTaps + 1);
+                } else {
+                    setAdminTaps(0);
+                }
+                break;
+        }
+
+        if (adminTaps == 5) {
+            setAdminTaps(0);
+            onAdminEnabled(true);
+        }
+    }
+
     return (<>
         <form id="postForm" ref={(ref) => { form.current = ref; }}>
             <div className="input">
-                <div className="label">Name: </div>
+                <div className="label" ref={(ref) => {nameLabel.current = ref}} onClick={() => {onAdminTap(nameLabel.current)}}>Name: </div>
                 <input className="formItem"
                     name='name' value={cookies.name}
                     onChange={(evt) => { validateAndSetName(evt) }}
                 />
             </div>
             <div className='input'>
-                <div className="label">
+                <div className="label" ref={(ref) => { commentLabel.current = ref }} onClick={() => { onAdminTap(commentLabel.current) }}>
                     Comment:<br />
                     <span className='sublabel'>({comment.length} / 400)</span>
                 </div>

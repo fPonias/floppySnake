@@ -1,3 +1,4 @@
 export interface CookieValues {
-    name?: string
+    name?: string,
+    token?: string
 };

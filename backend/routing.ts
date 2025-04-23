@@ -13,6 +13,7 @@ import {
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
+import { authorize, isAuthorized } from './adminKey';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -206,9 +207,22 @@ sectigo.com
     })
 
     app.delete('/comment/:id', (req, res) => {
+        console.log("delete post called with " + req.params.id);
+        const isAdmin = (req.cookies.token && isAuthorized(req.cookies.token))
+        if (!isAdmin) {
+            console.log("auth failed for delete action");
+            res.status(401).send();
+            return;
+        }
+
         deleteComment(req.params.id)
             .then(response => {
-                res.status(200).send(response);
+                if (!response) {
+                    res.status(500).send("delete failed");
+                } else {
+                    MyWebSocket.instance.broadcast(req.params.id, response - 1);
+                    res.status(200).send(response);
+                }
             })
             .catch(error => {
                 res.status(500).send(error);
@@ -246,5 +260,32 @@ sectigo.com
                 console.log("post create failed with " + JSON.stringify(error));
                 res.status(500).send(error);
             })
+    })
+
+    app.get('/getAdmin/:key', (req, res) => {
+        console.log("getAdmin called with " + JSON.stringify(req.params));
+        const key = req.params.key;
+
+        const auth = authorize(key);
+
+        if (auth == null) {
+            console.log("auth request rejected with " + key);
+            res.status(500).send("nope");
+            return;
+        }
+
+        res.status(200).set({
+            "Set-Cookie": "token=" + auth + "; HttpOnly; SameSite=Strict; Path=/;",
+            "Access-Control-Allow-Credentials": "true",
+        }).send(auth);
+    })
+
+    app.get('/isAdmin/:key', (req, res) => {
+        console.log("isAdmin called with " + JSON.stringify(req.params));
+        const key = req.params.key;
+
+        const auth = isAuthorized(key);
+
+        res.status(200).send(auth ? "true" : "false");
     })
 }
