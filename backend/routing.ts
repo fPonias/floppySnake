@@ -220,8 +220,10 @@ sectigo.com
                 if (!response) {
                     res.status(500).send("delete failed");
                 } else {
-                    MyWebSocket.instance.broadcast(req.params.id, response - 1);
                     res.status(200).send(response);
+                    console.log("sending socket broadcast with id " + req.params.id + " and time " + response);
+                    const id = Number.parseInt(req.params.id);
+                    MyWebSocket.instance.broadcast(id, response - 1);
                 }
             })
             .catch(error => {

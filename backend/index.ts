@@ -46,7 +46,10 @@ app.use(morgan('common', { stream: accessLogStream }));
 
 app.use(cookieParser());
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+        console.log("cors request with origin " + origin); 
+        callback(null, origin)
+    },
     credentials: true,
 }));
 

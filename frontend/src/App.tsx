@@ -42,7 +42,7 @@ function App() {
 
                 if (!commentBack) { return; }
 
-                if (postid == commentBack.postid && date > commentBack.newest) {
+                if (date > commentBack.newest) {
                     doUpdate();
                 }
             } else if (data.token) {
