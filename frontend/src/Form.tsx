@@ -11,7 +11,6 @@ interface FormArgs {
     postid: number,
     onPosted?: () => void,
     token?: string | null,
-    enableAdmin?: boolean,
     onAdminEnabled?: (enabled: boolean) => void
 }
 
@@ -21,7 +20,6 @@ export function FormComponent({
     active = true,
     onPosted = () => {},
     token = null,
-    enableAdmin = false,
     onAdminEnabled = (_) => {}
 }:FormArgs):JSX.Element {
     const [comment, setComment] = useState<string>("");

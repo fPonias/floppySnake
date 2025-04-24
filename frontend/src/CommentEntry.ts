@@ -1,4 +1,3 @@
-import { Cookies } from "react-cookie"
 import env from "../../env"
 
 export default class CommentEntry {
@@ -228,7 +227,7 @@ export class CommentEntries {
     async deletePost(id: number) {
         try {
             const url = env.api + "/comment/" + id;
-            const json = await fetch(url, {
+            await fetch(url, {
                 method: 'DELETE',
                 credentials: "include"
             });
