@@ -7,55 +7,48 @@ import useWebSocket from 'react-use-websocket';
 import env from '../../env'
 import { WebSocketHook } from 'react-use-websocket/dist/lib/types';
 import { useCookies } from "react-cookie";
-import { CookieValues } from "./defs";
 import Comment from './Comment';
 
-
-export interface AppReducerProps {
-}
-
-export enum AppReducerAction {
-    UPDATED
-}
-export interface AppReducerEvent {
-    action: AppReducerAction,
-    data: any
-}
-
-export interface AppReducerState {
-    updatedComments: Set<number>
+interface ActiveReplyData {
+    name: string,
+    comment: string,
+    id: number
 }
 
 export interface AppContextProps {
     commentBackend: CommentEntries | null,
     apiToken: string | null,
     adminEnabled: boolean,
-    appReducerState: AppReducerState
+    expandedComments: Set<number>,
+    activeReply: ActiveReplyData | null,
+    onPosted: () => void,
 };
 
 export const AppContext = createContext<AppContextProps>({
     commentBackend: null, 
     apiToken: null,
     adminEnabled: false,
-    appReducerState: {updatedComments: new Set()}
+    expandedComments: new Set(),
+    activeReply: null,
+    onPosted: () => {}
 });
-
 
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
-    const [activeReply, setActiveReply] = useState<number | undefined>(undefined);
-
-    const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
-    const [updateExpandedMessage, setUpdateExpandedMessage] = useState<number>(-1);
-    const [updateContractedMessage, setUpdateContractedMessage] = useState<number>(-1);
     
     const [loading, setLoading] = useState(false);
     const appContext = useContext(AppContext);
 
     const ws = useRef<WebSocketHook | undefined>(undefined);
 
-    const [cookies, setCookie] = useCookies<"token", CookieValues>(["token"]);
+    const [cookies, setCookie] = useCookies(["token", "name"]);
+    const [triggerUpdate, setTriggerUpdate] = useState(0);
     
+    appContext.onPosted = function() {
+        appContext.activeReply = null;
+        setTriggerUpdate(triggerUpdate + 1);
+    }
+
     ws.current = useWebSocket(env.socketUrl, {
         onOpen: () => console.log('opened'),
         shouldReconnect: (_) => true,
@@ -121,11 +114,17 @@ function App() {
     });
 
     function replyClicked(id: number) {
-        if (id == activeReply) {
-            setActiveReply(undefined);
+        if (id == appContext.activeReply?.id) {
+            appContext.activeReply = null;
         } else {
-            setActiveReply(id);
+            appContext.activeReply = {
+                id: id,
+                name: cookies.name ?? "",
+                comment: ""
+            }
         }
+
+        setTriggerUpdate(triggerUpdate + 1);
     }
 
     async function deleteClicked(id:number) {
@@ -139,14 +138,12 @@ function App() {
         await appContext.commentBackend?.getRecent();
         await appContext.commentBackend?.sortTree();
         setComments(appContext.commentBackend?.tree ?? []);
-        setActiveReply(undefined);
     }
 
     async function doUpdate() {
         await appContext.commentBackend?.getNewest();
         await appContext.commentBackend?.sortTree();
         setComments(appContext.commentBackend?.tree ?? []);
-        setActiveReply(undefined);
     }
 
     async function doUpdateOn(id: number) {
@@ -172,25 +169,15 @@ function App() {
         }
     }
 
-    useEffect(() => {
-        const idInt = updateContractedMessage;
-        if (idInt == -1) { return; }
-        if (!expandedMessages.has(idInt)) { return; }
-        expandedMessages.delete(idInt);
+    function onCommentExpanded(id: number, isExpanded: boolean) {
+        if (isExpanded) {
+            appContext.expandedComments.add(id);
+        } else {
+            appContext.expandedComments.delete(id);
+        }
 
-        setExpandedMessages(new Set(expandedMessages));
-        setUpdateContractedMessage(-1);
-    }, [updateContractedMessage, expandedMessages])
-
-    useEffect(() => {
-        const idInt = updateExpandedMessage;
-        if (idInt == -1) { return; }
-        if (expandedMessages.has(idInt)) { return; }
-        expandedMessages.add(idInt);
-
-        setExpandedMessages(new Set(expandedMessages));
-        setUpdateExpandedMessage(-1);
-    }, [updateExpandedMessage, expandedMessages]);
+        setTriggerUpdate(triggerUpdate + 1);
+    }
 
     function renderComments(depth: number, commentsList: CommentEntry[]):JSX.Element[] {
         if(commentsList.length == 0) {return ([])}
@@ -198,16 +185,17 @@ function App() {
         const indent = depth * 20;
         const ret:JSX.Element[] = []
         for (let comment of commentsList) {
-            const isExpanded = expandedMessages.has(comment.id);
-            const hasActiveReply = activeReply == comment.id
+            const isExpanded = appContext.expandedComments.has(comment.id)
+            const hasActiveReply = appContext.activeReply?.id == comment.id
+
             const elem = (<Comment
                 comment={comment}
                 onReply={(id) => {replyClicked(id)}}
                 onDelete={(id) => {deleteClicked(id)}}
-                hasActiveReply={hasActiveReply}
-                isExpanded={isExpanded}
-                onExpanded={(id) => {setUpdateExpandedMessage(id)}}
+                onExpanded={(id, expanded) =>  onCommentExpanded(id, expanded)}
                 indent={indent}
+                isExpanded={isExpanded}
+                hasActiveReply={hasActiveReply}
             />)
             ret.push(elem);
             const children = renderComments(depth + 1, comment.children);

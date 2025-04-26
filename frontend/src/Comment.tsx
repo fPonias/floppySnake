@@ -2,7 +2,6 @@ import { useContext, useEffect, useState } from "react";
 import CommentEntry from "./CommentEntry";
 import { FormComponent } from "./Form";
 import { AppContext } from "./App";
-import useMount from "./useMount";
 import EventEmitter from "reactjs-eventemitter";
 
 interface CommentProps {
@@ -54,15 +53,18 @@ const Comment:React.FC<CommentProps> = ({
         }
     }
 
-    const[isOverFlowing, setIsOverFlowing] = useState<boolean>(false);
-    const[messageRef, setMessageRef] = useState<HTMLDivElement | null>(null);
+    const [isOverFlowing, setIsOverFlowing] = useState<boolean>(false);
+    const [messageRef, setMessageRef] = useState<HTMLDivElement | null>(null);
     const appContext = useContext(AppContext);
     const [localComment, setComment] = useState(comment);
 
     function renderReply() {
         if (hasActiveReply) {
             return (
-                <FormComponent active={hasActiveReply} replyTo={localComment} />
+                <FormComponent 
+                    active={hasActiveReply} 
+                    replyTo={localComment}
+                />
             )
         }
     }
@@ -117,8 +119,10 @@ const Comment:React.FC<CommentProps> = ({
             }
         }
 
+        const parsed = localComment.comment.split("\n");
+
         return (<>
-            <div className={messageClass} ref={(ref) => {setMessageRef(ref)}}><pre>{localComment.comment}</pre></div>
+            <div className={messageClass} ref={(ref) => {setMessageRef(ref)}}>{parsed.map((str) => {return (<>{str}<br/></>)})}</div>
             {link}
         </>)
     }

@@ -64,7 +64,7 @@
 }
 
 #minusOne .comment .message {
-    max-height: 100px;
+    max-height: 160px;
     overflow: hidden;
     color: black;
 }

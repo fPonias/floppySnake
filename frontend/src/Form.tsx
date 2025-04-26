@@ -10,22 +10,21 @@ interface FormArgs {
     replyTo?: CommentEntry | undefined,
     active?: boolean,
     onPosted?: () => void,
-    onAdminEnabled?: (enabled: boolean) => void
+    onAdminEnabled?: (enabled: boolean) => void,
 }
 
 export function FormComponent({
     replyTo = undefined,
     active = true,
-    onPosted = () => {},
     onAdminEnabled = (_) => {}
-}:FormArgs):JSX.Element {
-    const [comment, setComment] = useState<string>("");
+}: FormArgs): JSX.Element {
+    const appContext = useContext(AppContext);
+    const [comment, setComment] = useState<string>(appContext.activeReply?.comment ?? "");
     const form = useRef<HTMLFormElement | null>(null); 
     const [cookies, setCookie] = useCookies<"name", CookieValues>(["name"]);
     const [adminTaps, setAdminTaps] = useState<number>(0);
     const nameLabel = useRef<HTMLDivElement | null>(null);
     const commentLabel = useRef<HTMLDivElement | null>(null);
-    const appContext = useContext(AppContext);
 
     async function postComment(evt:React.MouseEvent) {
         evt.preventDefault();
@@ -56,7 +55,7 @@ export function FormComponent({
 
             setComment("");
 
-            onPosted();
+            appContext.onPosted();
         } catch (e) {
             console.log("failed to post comment " + JSON.stringify(e));
         }
@@ -80,6 +79,10 @@ export function FormComponent({
         }
 
         setComment(newValue);
+        const activeReply = appContext.activeReply;
+        if (activeReply) {
+            activeReply.comment = newValue;
+        }
     }
 
     if (!active) {
