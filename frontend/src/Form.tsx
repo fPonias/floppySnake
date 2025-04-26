@@ -1,25 +1,22 @@
-import React, { JSX, useRef, useState } from "react";
+import React, { JSX, useContext, useRef, useState } from "react";
 import env from "../../env";
 import CommentEntry from "./CommentEntry";
 import { useCookies } from "react-cookie";
 import { CookieValues } from "./defs";
+import { AppContext } from "./App";
 
 
 interface FormArgs {
     replyTo?: CommentEntry | undefined,
     active?: boolean,
-    postid: number,
     onPosted?: () => void,
-    token?: string | null,
     onAdminEnabled?: (enabled: boolean) => void
 }
 
 export function FormComponent({
     replyTo = undefined,
-    postid,
     active = true,
     onPosted = () => {},
-    token = null,
     onAdminEnabled = (_) => {}
 }:FormArgs):JSX.Element {
     const [comment, setComment] = useState<string>("");
@@ -28,11 +25,14 @@ export function FormComponent({
     const [adminTaps, setAdminTaps] = useState<number>(0);
     const nameLabel = useRef<HTMLDivElement | null>(null);
     const commentLabel = useRef<HTMLDivElement | null>(null);
+    const appContext = useContext(AppContext);
 
     async function postComment(evt:React.MouseEvent) {
         evt.preventDefault();
 
         const url = env.api + "/comment";
+        const postid = appContext.commentBackend?.postid ?? 0
+        const token = appContext.apiToken
         let args = {
             comment: comment,
             name: cookies.name,

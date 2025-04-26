@@ -120,8 +120,8 @@ sectigo.com
         findFirst(".css", res)
     })
 
-    app.get('/comment/:postid', (req, res) => {
-        console.log("get comment called with " + JSON.stringify(req.body));
+    app.get('/comments/:postid', (req, res) => {
+        console.log("get comments called with " + JSON.stringify(req.body));
         getTopComments(req.params.postid)
             .then(response => {
                 res.status(200).send(response);
@@ -131,7 +131,7 @@ sectigo.com
             })
     })
 
-    app.get('/comment/:postid/before/:before', (req, res) => {
+    app.get('/comments/:postid/before/:before', (req, res) => {
         console.log("get comment before called with " + JSON.stringify(req.params));
         getOlderComments(req.params.postid, req.params.before)
             .then(response => {
@@ -142,7 +142,7 @@ sectigo.com
             })
     })
 
-    app.get('/comment/:postid/count', (req, res) => {
+    app.get('/comments/:postid/count', (req, res) => {
         console.log("get comment count called");
         getCommentCount(req.params.postid)
             .then(response => {
@@ -153,7 +153,7 @@ sectigo.com
             })
     })
 
-    app.get('/comment/:postid/after/:after', (req, res) => {
+    app.get('/comments/:postid/after/:after', (req, res) => {
         console.log("get comment after called with " + JSON.stringify(req.params));
         getRecentComments(req.params.postid, req.params.after)
             .then(response => {
@@ -198,7 +198,7 @@ sectigo.com
                 console.log("post comment successful");
                 res.status(200).send(response);
 
-                MyWebSocket.instance.broadcast(postid, now);
+                MyWebSocket.instance.broadcastNewPost(postid, now);
             })
             .catch(error => {
                 console.log("post comment failed with " + JSON.stringify(error));
@@ -223,7 +223,8 @@ sectigo.com
                     res.status(200).send(response);
                     console.log("sending socket broadcast with id " + req.params.id + " and time " + response);
                     const id = Number.parseInt(req.params.id);
-                    MyWebSocket.instance.broadcast(id, response - 1);
+
+                    MyWebSocket.instance.broadcastUpdatePost(id);
                 }
             })
             .catch(error => {

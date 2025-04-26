@@ -1,4 +1,4 @@
-import React, { JSX, useEffect, useRef, useState } from 'react'
+import React, { createContext, JSX, useContext, useEffect, useReducer, useRef, useState } from 'react'
 import './App.css'
 import useMount from './useMount';
 import { FormComponent } from './Form';
@@ -8,23 +8,53 @@ import env from '../../env'
 import { WebSocketHook } from 'react-use-websocket/dist/lib/types';
 import { useCookies } from "react-cookie";
 import { CookieValues } from "./defs";
+import Comment from './Comment';
+
+
+export interface AppReducerProps {
+}
+
+export enum AppReducerAction {
+    UPDATED
+}
+export interface AppReducerEvent {
+    action: AppReducerAction,
+    data: any
+}
+
+export interface AppReducerState {
+    updatedComments: Set<number>
+}
+
+export interface AppContextProps {
+    commentBackend: CommentEntries | null,
+    apiToken: string | null,
+    adminEnabled: boolean,
+    appReducerState: AppReducerState
+};
+
+export const AppContext = createContext<AppContextProps>({
+    commentBackend: null, 
+    apiToken: null,
+    adminEnabled: false,
+    appReducerState: {updatedComments: new Set()}
+});
+
 
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
     const [activeReply, setActiveReply] = useState<number | undefined>(undefined);
-    const [apiToken, setApiToken] = useState<string | null>(null);
 
     const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
-    const [overflowing, setOverflowing] = useState<Set<number>>(new Set());
     const [updateExpandedMessage, setUpdateExpandedMessage] = useState<number>(-1);
     const [updateContractedMessage, setUpdateContractedMessage] = useState<number>(-1);
     
     const [loading, setLoading] = useState(false);
-    const commentBackend = useRef<CommentEntries | null>(null);
+    const appContext = useContext(AppContext);
+
     const ws = useRef<WebSocketHook | undefined>(undefined);
 
     const [cookies, setCookie] = useCookies<"token", CookieValues>(["token"]);
-    const [adminEnabled, setAdminEnabled] = useState<boolean>(false);
     
     ws.current = useWebSocket(env.socketUrl, {
         onOpen: () => console.log('opened'),
@@ -35,18 +65,29 @@ function App() {
 
             const data = JSON.parse(evt.data);
 
-            if (data.postid) {
-                const postid = data.postid;
+            if (!data.action) {
+                return;
+            }
+
+            if (data.action == "new") {
+                //const postid = data.postid;
                 const date = data.updated;
-                const commentBack = commentBackend.current;
+                const commentBack = appContext.commentBackend;
 
                 if (!commentBack) { return; }
 
                 if (date > commentBack.newest) {
                     doUpdate();
                 }
-            } else if (data.token) {
-                setApiToken(data.token);
+            } else if (data.action == "token") {
+                appContext.apiToken = data.token;
+            } else if (data.action == "update") {
+                const id = data.postid;
+                const commentBack = appContext.commentBackend;
+
+                if (!commentBack) { return;}
+
+                doUpdateOn(id);
             }
         },
     });
@@ -61,16 +102,16 @@ function App() {
     useMount(() => {
         setLoading(true);
         const siteid = getSiteID();
-        if (commentBackend.current == null || commentBackend.current.url != siteid) {
-            commentBackend.current = new CommentEntries(siteid);
+        if (appContext.commentBackend == null || appContext.commentBackend.url != siteid) {
+            appContext.commentBackend = new CommentEntries(siteid);
         }
 
         async function delayed() {
-            if (!commentBackend.current) {return}
+            if (!appContext.commentBackend) {return}
 
             if (cookies.token) {
-                const verified = await commentBackend.current.verifyAdmin(cookies.token);
-                setAdminEnabled(verified);
+                const verified = await appContext.commentBackend.verifyAdmin(cookies.token);
+                appContext.adminEnabled = verified;
             }
 
             await firstLoad()
@@ -79,40 +120,7 @@ function App() {
         delayed();
     });
 
-    function dateToAgo(date: number): string {
-        const min = 60;
-        const hour = min * 60;
-        const day = hour * 24;
-        const long = day * 30;
-
-        const now = new Date().getTime();
-        const diff = Math.max(0, now - date) / 1000;
-        
-        if (diff <= 15) {
-            return "just now";
-        } else if (diff <= min) {
-            return Math.floor(diff) + " seconds ago";
-        } else if (diff <= hour) {
-            const hr = Math.floor(diff / min);
-            if (hr == 1) { return "1 minute ago";}
-            else { return hr + " minutes ago" };
-        } else if (diff <= day) {
-            const dy = Math.floor(diff / hour);
-            if (dy == 1) { return "1 hour ago"}
-            else { return dy + " hours ago"} 
-        } else if (diff <= long) {
-            const mo = Math.floor(diff / day);
-            if (mo == 1) { return "1 day ago"}
-            else {return mo + " days ago"}
-        } else {
-            return "long ago";
-        }
-    }
-
-    function replyClicked(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-        const idStr = evt.currentTarget.id;
-        const id = Number.parseInt(idStr);
-
+    function replyClicked(id: number) {
         if (id == activeReply) {
             setActiveReply(undefined);
         } else {
@@ -120,47 +128,40 @@ function App() {
         }
     }
 
-    async function deleteClicked(evt: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-        const idStr = evt.currentTarget.id;
-        const id = Number.parseInt(idStr);
+    async function deleteClicked(id:number) {
+        if (!appContext.adminEnabled) { return; }
 
-        if (!adminEnabled) { return; }
-
-        await commentBackend.current?.deletePost(id);
+        await appContext.commentBackend?.deletePost(id);
     }
 
     async function firstLoad() {
-        await commentBackend.current?.getPost();
-        await commentBackend.current?.getRecent();
-        await commentBackend.current?.sortTree();
-        setComments(commentBackend.current?.tree ?? []);
+        await appContext.commentBackend?.getPost();
+        await appContext.commentBackend?.getRecent();
+        await appContext.commentBackend?.sortTree();
+        setComments(appContext.commentBackend?.tree ?? []);
         setActiveReply(undefined);
     }
 
     async function doUpdate() {
-        await commentBackend.current?.getNewest();
-        await commentBackend.current?.sortTree();
-        setComments(commentBackend.current?.tree ?? []);
+        await appContext.commentBackend?.getNewest();
+        await appContext.commentBackend?.sortTree();
+        setComments(appContext.commentBackend?.tree ?? []);
         setActiveReply(undefined);
     }
 
-    async function loadMore() {
-        await commentBackend.current?.getOlder()
-        await commentBackend.current?.sortTree();
-        setComments(commentBackend.current?.tree ?? []);
+    async function doUpdateOn(id: number) {
+        await appContext.commentBackend?.updateComment(id);
     }
 
-    function renderReply(comment: CommentEntry) {
-        if (activeReply == comment.id) {
-            return (
-                <FormComponent active={comment.id == activeReply} postid={commentBackend.current?.postid ?? 0} replyTo={comment} token={apiToken}/>
-            )
-        }
+    async function loadMore() {
+        await appContext.commentBackend?.getOlder()
+        await appContext.commentBackend?.sortTree();
+        setComments(appContext.commentBackend?.tree ?? []);
     }
 
     function renderLoadMore() {
-        const count = commentBackend.current?.count ?? 0;
-        const map = commentBackend.current?.map;
+        const count = appContext.commentBackend?.count ?? 0;
+        const map = appContext.commentBackend?.map;
         const mapSz = map?.size ?? 0;
         if (count > mapSz) {
             return (
@@ -191,94 +192,40 @@ function App() {
         setUpdateExpandedMessage(-1);
     }, [updateExpandedMessage, expandedMessages]);
 
-    useEffect(() => {
-        const messages = document.getElementsByClassName("message");
-        const arr = new Set<number>();
-        for (let element of messages) {
-            if (!element.parentElement) {
-                continue;
-            }
-
-            const id = element.parentElement?.id;
-            const idInt = Number.parseInt(id);
-            const isExpanded = expandedMessages.has(idInt);
-
-            if (element.scrollHeight > element.clientHeight || isExpanded) {
-                console.log("found overflowing message " + id);
-                arr.add(idInt);
-            }
-        }
-
-        setOverflowing(arr);
-    }, [comments, loading, expandedMessages]);
-
-    function renderMessage(comment: CommentEntry) {
-        const id = comment.id;
-
-        let messageClass = "message"
-        let link = (<></>)
-        if (overflowing.has(comment.id)) {
-            const isExpanded = expandedMessages.has(id)
-            if (isExpanded) { messageClass += " expandedMessage"; }
-
-            if (expandedMessages.has(comment.id)) {
-                link = (
-                    <a onClick={() => {
-                        setUpdateContractedMessage(id)
-                    }
-                    }>Read less</a>
-                )
-            } else {
-                link = (
-                    <a onClick={() => {
-                        setUpdateExpandedMessage(id)
-                    }
-                    }>Read more</a>
-                )
-            }
-        }
-
-        return (<>
-            <div className={messageClass}><pre>{comment.comment}</pre></div>
-            {link}
-        </>)
-    }
-
-    function renderComments(depth: number, commentsList: CommentEntry[]):JSX.Element {
-        if(commentsList.length == 0) {return (<></>)}
+    function renderComments(depth: number, commentsList: CommentEntry[]):JSX.Element[] {
+        if(commentsList.length == 0) {return ([])}
 
         const indent = depth * 20;
-        return (<>
-            {commentsList.map((comment) => {
-                const time = dateToAgo(comment.posted);
-                const name = (comment.name) ? comment.name : "anonymous coward";
-                return (<>
-                    <div className='comment' key={"comment-" + comment.id} id={comment.id.toString()} style={{ marginLeft: indent + "px" }}>
-                        <div className='header'><span className='name'>{name}</span><span className='time'>{time}</span></div>
-                        {renderMessage(comment)}
-                        <div className="reply" id={comment.id.toString()} onClick={(evt) => { replyClicked(evt) }}>
-                            <a>Reply</a>
-                        </div>
-                        {!adminEnabled ? (<></>) : (
-                            <div className="delete" id={comment.id.toString()} onClick={(evt) => { deleteClicked(evt) }}>
-                                <a>Delete</a>
-                            </div>
-                        )}
-                        {renderReply(comment)}
-                    </div>
-                    {renderComments(depth + 1, comment.children)}
-                </>)
-            })}
-        </>);
+        const ret:JSX.Element[] = []
+        for (let comment of commentsList) {
+            const isExpanded = expandedMessages.has(comment.id);
+            const hasActiveReply = activeReply == comment.id
+            const elem = (<Comment
+                comment={comment}
+                onReply={(id) => {replyClicked(id)}}
+                onDelete={(id) => {deleteClicked(id)}}
+                hasActiveReply={hasActiveReply}
+                isExpanded={isExpanded}
+                onExpanded={(id) => {setUpdateExpandedMessage(id)}}
+                indent={indent}
+            />)
+            ret.push(elem);
+            const children = renderComments(depth + 1, comment.children);
+            if (children.length > 0) {
+                ret.push(... children);
+            }
+        };
+
+        return ret
     }
 
     async function onAdminEnabled() {
-        if (!commentBackend.current) { return; }
+        if (!appContext.commentBackend) { return; }
 
         const password = prompt('Password:')
-        const token = await commentBackend.current.requestAdmin(password ?? "");
+        const token = await appContext.commentBackend.requestAdmin(password ?? "");
         
-        setAdminEnabled(token != null);
+        appContext.adminEnabled = (token != null);
         setCookie("token", token);
     }
 
@@ -288,7 +235,7 @@ function App() {
 
 
     return (<div className='outer'>
-        <FormComponent postid={commentBackend.current?.postid ?? 0} token={apiToken} onAdminEnabled={(_) => onAdminEnabled()}/>
+        <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
         <div className='comments'>
             {renderComments(0, comments)}
             {renderLoadMore()}

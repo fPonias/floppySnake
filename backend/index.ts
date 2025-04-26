@@ -47,7 +47,6 @@ app.use(morgan('common', { stream: accessLogStream }));
 app.use(cookieParser());
 app.use(cors({
     origin: function (origin, callback) {
-        console.log("cors request with origin " + origin); 
         callback(null, origin)
     },
     credentials: true,

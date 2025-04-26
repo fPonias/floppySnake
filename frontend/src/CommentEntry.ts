@@ -1,4 +1,5 @@
 import env from "../../env"
+import EventEmitter from "reactjs-eventemitter";
 
 export default class CommentEntry {
     id: number
@@ -21,6 +22,12 @@ export default class CommentEntry {
 
         this.children = [];
     };
+
+    update(target: CommentEntry) {
+        this.updated = target.updated;
+        this.comment = target.comment;
+        this.name = target.name;
+    }
 }
 
 export class CommentCountInfo {
@@ -43,6 +50,8 @@ export class CommentEntries {
 
     url: string = "";
     postid: number = 0;
+
+
 
     constructor(url: string) {
         this.url = url;
@@ -109,7 +118,7 @@ export class CommentEntries {
 
     async getCounts() {
         try {
-            const url = env.api + "/comment/" + this.postid + "/count";
+            const url = env.api + "/comments/" + this.postid + "/count";
             const json = await fetch(url);
             const obj = await this.parseCounts(json);
 
@@ -122,15 +131,30 @@ export class CommentEntries {
     }
 
     async getRecent() {
-        return this.getComments(env.api + "/comment/" + this.postid);
+        return this.getComments(env.api + "/comments/" + this.postid);
     }
 
     async getNewest() {
-        return this.getComments(env.api + "/comment/" + this.postid + "/after/" + this.newest);
+        return this.getComments(env.api + "/comments/" + this.postid + "/after/" + this.newest);
     }
 
     async getOlder() {
-        return this.getComments(env.api + "/comment/" + this.postid + "/before/" + this.oldestLoaded);
+        return this.getComments(env.api + "/comments/" + this.postid + "/before/" + this.oldestLoaded);
+    }
+
+    async updateComment(id:number) {
+        const url = env.api + "/comment/" + id;
+        const json = await fetch(url);
+        const data = await json.json();
+        const comment = new CommentEntry(data);
+        
+        if (this.map.has(comment.id)) {
+            this.map.set(comment.id, comment);
+        }
+
+        const oldComment = this.map.get(comment.id);
+        oldComment?.update(comment);
+        EventEmitter.dispatch("commentUpdated", {id: comment.id});
     }
 
     async getComments(url:string) {
@@ -193,19 +217,24 @@ export class CommentEntries {
         }
     }
 
-    async requestAdmin(key: string):Promise<string> {
+    async requestAdmin(key: string):Promise<string | null> {
         try {
             const url = env.api + "/getAdmin/" + key;
             const json = await fetch(url);
-            const decoder = new TextDecoder();
-            const arr = await json.bytes();
-            const str = decoder.decode(arr);
-            return str;
+            if (json.status == 200) {
+                const decoder = new TextDecoder();
+                const arr = await json.bytes();
+                const str = decoder.decode(arr);
+                return str;
+            } else {
+                console.log("failed to obtain authorization");
+                return null
+            }
         } catch (err) {
             console.log("failed to obtain authorization " + JSON.stringify(err));
         }
 
-        return "";
+        return null;
     }
 
     async verifyAdmin(token: string): Promise<boolean> {

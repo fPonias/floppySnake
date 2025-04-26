@@ -34,7 +34,7 @@ export default class MyWebSocket {
         connection.on("close", () => this.handleClose(uuid))
 
         console.log("sending api token " + uuid);
-        connection.send(JSON.stringify({token: uuid}));
+        connection.send(JSON.stringify({action: "token", token: uuid}));
     }
 
     isLoggedIn(token) {
@@ -48,11 +48,20 @@ export default class MyWebSocket {
         this.connections.delete(uuid);
     }
 
-    broadcast(postid: number, updated: number) {
+    broadcastNewPost(postid: number, updated: number) {
+        const message = JSON.stringify({ action: "new", postid: postid, updated: updated });
+        this.sendBroadcast(message);
+    }
+
+    broadcastUpdatePost(postid: number) {
+        const message = JSON.stringify({ action: "update", postid: postid });
+        this.sendBroadcast(message);
+    }
+
+    sendBroadcast(message:string) {
         const keys = this.connections.keys();
         for (let uuid of keys) {
             const connection = this.connections.get(uuid);
-            const message = JSON.stringify({ postid: postid, updated: updated });
             connection.send(message)
         }
     }
