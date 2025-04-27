@@ -63,12 +63,12 @@ const Comment:React.FC<CommentProps> = ({
 
     function renderReply() {
         if (hasActiveReply) {
-            return (
+            return ( <div className="commentLeft">
                 <FormComponent 
                     active={hasActiveReply} 
                     replyTo={localComment}
                 />
-            )
+            </div>)
         }
     }
 
