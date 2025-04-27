@@ -52,7 +52,7 @@ export const getComment = async (id:number): Promise<any> => {
 }
 export const flagComment = async(id:number):Promise<any> => {
     try {
-        const res = await pool.query("UPDATE comment SET flagged=1 WHERE id = $1", [id]);
+        const res = await pool.query("UPDATE comment SET flagged=true WHERE id = $1", [id]);
         return true;
     } catch (err) {
         console.error(err);
@@ -92,7 +92,8 @@ export const createComment = async (
     comment:string, 
     name: string | null,
     postid: number, 
-    parent:number | null
+    parent:number | null,
+    original: string | null
 ):Promise<CommentEntry | null> => {
     try {
         if(!MyWebSocket.instance.isLoggedIn(token)) {
@@ -112,8 +113,8 @@ export const createComment = async (
         }
 
         const short = comment.substring(0, 400);
-        text = "INSERT INTO comment (parent, posted, updated, comment, name, ip, postid) VALUES ($1, $2, $3, $4, $5, $6, $7)";
-        const values = [parent, now, now, short, name, token, postid];
+        text = "INSERT INTO comment (parent, posted, updated, comment, name, ip, postid, original) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)";
+        const values = [parent, now, now, short, name, token, postid, original ?? ""];
         result = await pool.query(text, values);
         if (result && result.rows) {
             const ret = result.rows[0];

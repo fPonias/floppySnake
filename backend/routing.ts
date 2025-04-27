@@ -15,13 +15,9 @@ import {
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
 import { authorize, isAuthorized } from './adminKey';
+import { filterString } from './filter';
 
 const env = (env2.default) ? env2.default : env2;
-
-
-//Kyle Chillingworth
-//Jericho
-//nigger - brilliant black man
 
 export default function setupRouting(app:any) {
     const wellKnownContent = `DCFED0EFA645CA8FE804941CE4DD4BC7F3CBA688DAFD88388C6122591BDDF88F
@@ -185,7 +181,7 @@ sectigo.com
         console.log("flag comment called with " + JSON.stringify(req.params));
 
         if (!isAuthorized(req)) {
-            console.log("auth failed for delete action");
+            console.log("auth failed for flag action");
             res.status(401).send();
             return;
         }
@@ -204,7 +200,7 @@ sectigo.com
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         console.log("post called from " + ip);
 
-        console.log("headers: " + JSON.stringify(req.headers));
+        //console.log("headers: " + JSON.stringify(req.headers));
 
         const json = req.body;
         if (!json.comment) {
@@ -213,14 +209,22 @@ sectigo.com
             return;
         }
 
-        const comment = json.comment.substring(0, 4096);
-        const name = json.name ?? null;
+        let original = json.comment.substring(0, 4096);
+        let name = json.name ?? null;
         const parent = json.parent ?? null;
         const postid = json.postid ?? 0;
         const now = new Date().getTime();
         const token = json.token
 
-        createComment(token, comment, name, postid, parent)
+        name = filterString(name);
+        const comment = filterString(original);
+        if (original == comment) {
+            original = "";
+        } else {
+            console.log("comment " + original + " filtered to " + comment);
+        }
+
+        createComment(token, comment, name, postid, parent, original)
             .then(response => {
                 console.log("post comment successful");
                 res.status(200).send(response);
