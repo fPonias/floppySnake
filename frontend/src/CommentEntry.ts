@@ -50,6 +50,7 @@ export class CommentEntries {
 
     url: string = "";
     postid: number = 0;
+    adminToken: string | null = null;
 
 
 
@@ -225,6 +226,7 @@ export class CommentEntries {
                 const decoder = new TextDecoder();
                 const arr = await json.bytes();
                 const str = decoder.decode(arr);
+                this.adminToken = str;
                 return str;
             } else {
                 console.log("failed to obtain authorization");
@@ -255,13 +257,24 @@ export class CommentEntries {
 
     async deletePost(id: number) {
         try {
-            const url = env.api + "/comment/" + id;
+            const url = env.api + "/comment/" + id + "/" + this.adminToken;
             await fetch(url, {
                 method: 'DELETE',
                 credentials: "include"
             });
         } catch (err) {
             console.log("failed to delete post entry " + JSON.stringify(err));
+        }
+    }
+
+    async flagPost(id: number) {
+        try {
+            const url = env.api + "/comment/flag/" + id + "/" + this.adminToken;
+            await fetch(url, {
+                credentials: "include"
+            });
+        } catch (err) {
+            console.log("failed to flag post entry " + JSON.stringify(err));
         }
     }
 }

@@ -9,13 +9,19 @@ import {
     getOlderComments,
     getTopComments,
     getPost,
-    createPost
+    createPost,
+    flagComment
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
 import { authorize, isAuthorized } from './adminKey';
 
 const env = (env2.default) ? env2.default : env2;
+
+
+//Kyle Chillingworth
+//Jericho
+//nigger - brilliant black man
 
 export default function setupRouting(app:any) {
     const wellKnownContent = `DCFED0EFA645CA8FE804941CE4DD4BC7F3CBA688DAFD88388C6122591BDDF88F
@@ -175,8 +181,30 @@ sectigo.com
             })
     });
 
+    app.get('/comment/flag/:id{/:token}', (req, res) => {
+        console.log("flag comment called with " + JSON.stringify(req.params));
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed for delete action");
+            res.status(401).send();
+            return;
+        }
+
+        flagComment(req.params.id)
+            .then(response => {
+                res.status(200).send(response);
+            })
+            .catch(error => {
+                res.status(500).send(error);
+            })
+    });
+
     app.post('/comment', (req, res) => {
         console.log("post comment called with " + JSON.stringify(req.body));
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        console.log("post called from " + ip);
+
+        console.log("headers: " + JSON.stringify(req.headers));
 
         const json = req.body;
         if (!json.comment) {
@@ -188,7 +216,6 @@ sectigo.com
         const comment = json.comment.substring(0, 4096);
         const name = json.name ?? null;
         const parent = json.parent ?? null;
-        const ip = "";
         const postid = json.postid ?? 0;
         const now = new Date().getTime();
         const token = json.token
@@ -206,10 +233,10 @@ sectigo.com
             })
     })
 
-    app.delete('/comment/:id', (req, res) => {
-        console.log("delete post called with " + req.params.id);
-        const isAdmin = (req.cookies.token && isAuthorized(req.cookies.token))
-        if (!isAdmin) {
+    app.delete('/comment/:id{/:token}', (req, res) => {
+        console.log("delete post called with " + JSON.stringify(req.params));
+        
+        if (!isAuthorized(req)) {
             console.log("auth failed for delete action");
             res.status(401).send();
             return;

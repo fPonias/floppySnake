@@ -9,8 +9,12 @@ export function resetKey() {
     showKey();
 }
 
-export function isAuthorized(token:string):boolean {
-    return grants.has(token);
+export function isAuthorized(token:any):boolean {
+    if (grants.has(token)) { return true; }
+    if (token.params.token && grants.has(token.params.token)) { return true; }
+    if (token.cookies.token && grants.has(token.cookies.token)) { return true; }
+
+    return false;
 }
 
 export function showKey() {

@@ -49,6 +49,7 @@
     border-top: solid 1px;
     padding: 10px 0px;
     width: 100%;
+    overflow: auto;
 }
 
 #minusOne .comment .name {
@@ -69,10 +70,18 @@
     color: black;
 }
 
-#minusOne .message pre {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-}
-
 #minusOne .comment .expandedMessage {
     max-height: none;
+}
+
+#minusOne .comment .commentLeft {
+    float: left;
+}
+
+#minusOne .comment .admin {
+    float: right;
+}
+
+#minusOne .comment .admin .delete {
+    margin-bottom: 20px;
 }

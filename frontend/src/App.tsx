@@ -179,6 +179,10 @@ function App() {
         setTriggerUpdate(triggerUpdate + 1);
     }
 
+    function onCommentFlagged(id: number) {
+        appContext.commentBackend?.flagPost(id);
+    }
+
     function renderComments(depth: number, commentsList: CommentEntry[]):JSX.Element[] {
         if(commentsList.length == 0) {return ([])}
 
@@ -193,6 +197,7 @@ function App() {
                 onReply={(id) => {replyClicked(id)}}
                 onDelete={(id) => {deleteClicked(id)}}
                 onExpanded={(id, expanded) =>  onCommentExpanded(id, expanded)}
+                onFlag={(id) => onCommentFlagged(id)}
                 indent={indent}
                 isExpanded={isExpanded}
                 hasActiveReply={hasActiveReply}

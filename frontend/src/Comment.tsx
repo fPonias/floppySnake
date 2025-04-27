@@ -8,6 +8,7 @@ interface CommentProps {
     comment: CommentEntry,
     onReply?: (id: number) => void,
     onDelete?: (id: number) => void,
+    onFlag?: (id: number) => void,
     hasActiveReply?: boolean,
     isExpanded?: boolean,
     onExpanded?: (id: number, expanded: boolean) => void,
@@ -18,6 +19,7 @@ const Comment:React.FC<CommentProps> = ({
     comment,
     onReply = () => {},
     onDelete = () => {},
+    onFlag = () => {},
     hasActiveReply = false,
     isExpanded = false,
     onExpanded = () => {},
@@ -131,17 +133,23 @@ const Comment:React.FC<CommentProps> = ({
     const name = (localComment.name) ? localComment.name : "anonymous coward";
     return (<>
         <div className='comment' key={"comment-" + localComment.id} id={localComment.id.toString()} style={{ marginLeft: indent + "px" }}>
-            <div className='header'><span className='name'>{name}</span><span className='time'>{time}</span></div>
-            {renderMessage()}
-            <div className="reply" onClick={() => { onReply(localComment.id) }}>
-                <a>Reply</a>
+            <div className="commentLeft">
+                <div className='header'><span className='name'>{name}</span><span className='time'>{time}</span></div>
+                {renderMessage()}
+                <div className="reply" onClick={() => { onReply(localComment.id) }}>
+                    <a>Reply</a>
+                </div>
             </div>
-            {!appContext.adminEnabled ? (<></>) : (
+            {!appContext.adminEnabled ? (<></>) : (<div className="admin">
                 <div className="delete" onClick={() => { onDelete(localComment.id) }}>
                     <a>Delete</a>
                 </div>
-            )}
+                <div className="flag" onClick={() => { onFlag(localComment.id) }}>
+                    <a>Flag</a>
+                </div>
+            </div>)}
             {renderReply()}
+            
         </div>
     </>)
 }

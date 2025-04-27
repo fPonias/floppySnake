@@ -50,6 +50,15 @@ export const getComment = async (id:number): Promise<any> => {
         throw new Error("Internal server error");
     }
 }
+export const flagComment = async(id:number):Promise<any> => {
+    try {
+        const res = await pool.query("UPDATE comment SET flagged=1 WHERE id = $1", [id]);
+        return true;
+    } catch (err) {
+        console.error(err);
+        throw new Error("Internal server error");
+    }
+}
 
 export const updateParent = async (id: number, date: number, failsafe: number = 0) => {
     if (failsafe > 20) {
