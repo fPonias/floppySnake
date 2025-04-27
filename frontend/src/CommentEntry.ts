@@ -1,4 +1,5 @@
 import env from "../../env"
+// @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
 
 export default class CommentEntry {

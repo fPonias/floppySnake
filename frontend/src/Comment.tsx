@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import CommentEntry from "./CommentEntry";
 import { FormComponent } from "./Form";
 import { AppContext } from "./App";
+// @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
 
 interface CommentProps {
