@@ -8,6 +8,8 @@ import env from '../../env'
 import { WebSocketHook } from 'react-use-websocket/dist/lib/types';
 import { useCookies } from "react-cookie";
 import Comment from './Comment';
+// @ts-ignore
+import EventEmitter from "reactjs-eventemitter";
 
 interface ActiveReplyData {
     name: string,
@@ -41,7 +43,7 @@ function App() {
 
     const ws = useRef<WebSocketHook | undefined>(undefined);
 
-    const [cookies, setCookie] = useCookies(["token", "name"]);
+    const [cookies, setCookie, removeCookie] = useCookies(["token", "name", "apiToken"]);
     const [triggerUpdate, setTriggerUpdate] = useState(0);
     
     appContext.onPosted = function() {
@@ -50,7 +52,13 @@ function App() {
     }
 
     ws.current = useWebSocket(env.socketUrl, {
-        onOpen: () => console.log('opened'),
+        onOpen: () => {
+            console.log('opened');
+
+            if (ws.current) {
+                ws.current.sendMessage(JSON.stringify({action: "apiTokenVerify", token: cookies.apiToken}));
+            }
+        },
         shouldReconnect: (_) => true,
         share: true,
         onMessage: (evt) => {
@@ -73,6 +81,7 @@ function App() {
                     doUpdate();
                 }
             } else if (data.action == "token") {
+                setCookie("apiToken", data.token);
                 appContext.apiToken = data.token;
             } else if (data.action == "update") {
                 const id = data.postid;
@@ -99,11 +108,26 @@ function App() {
             appContext.commentBackend = new CommentEntries(siteid);
         }
 
+        let lastTime = new Date().getTime();
+        setInterval(() => {
+            const time = new Date().getTime();
+            const diff = time - lastTime;
+            if (diff >= 1000) {
+                EventEmitter.dispatch("clockTick", { });
+                lastTime += 1000;
+            }
+        }, 250);
+
         async function delayed() {
             if (!appContext.commentBackend) {return}
 
             if (cookies.token) {
                 const verified = await appContext.commentBackend.verifyAdmin(cookies.token);
+
+                if (!verified) {
+                    removeCookie("token");
+                }
+
                 appContext.adminEnabled = verified;
             }
 

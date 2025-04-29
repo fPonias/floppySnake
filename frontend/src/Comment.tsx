@@ -4,6 +4,7 @@ import { FormComponent } from "./Form";
 import { AppContext } from "./App";
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
+import useMount from "./useMount";
 
 interface CommentProps {
     comment: CommentEntry,
@@ -60,6 +61,7 @@ const Comment:React.FC<CommentProps> = ({
     const [messageRef, setMessageRef] = useState<HTMLDivElement | null>(null);
     const appContext = useContext(AppContext);
     const [localComment, setComment] = useState(comment);
+    const [time, setTime] = useState("");
 
     function renderReply() {
         if (hasActiveReply) {
@@ -101,6 +103,19 @@ const Comment:React.FC<CommentProps> = ({
         }
     }, [isExpanded, localComment, isOverFlowing, messageRef])
 
+    function updateTime() {
+        const newTime = dateToAgo(localComment.posted);
+        setTime(newTime);
+    }
+
+    useEffect(() => {
+        EventEmitter.subscribe("clockTick", (event: any) => {
+            updateTime();
+        })
+
+        updateTime();
+    }, [localComment]);
+
     function renderMessage() {
         let messageClass = "message"
         let link = (<></>)
@@ -132,7 +147,6 @@ const Comment:React.FC<CommentProps> = ({
         </>)
     }
 
-    const time = dateToAgo(localComment.posted);
     const name = (localComment.name) ? localComment.name : "anonymous coward";
     return (<>
         <div className='comment' key={"comment-" + localComment.id} id={localComment.id.toString()} style={{ marginLeft: indent + "px" }}>

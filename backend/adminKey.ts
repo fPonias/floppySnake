@@ -11,8 +11,8 @@ export function resetKey() {
 
 export function isAuthorized(token:any):boolean {
     if (grants.has(token)) { return true; }
-    if (token.params.token && grants.has(token.params.token)) { return true; }
-    if (token.cookies.token && grants.has(token.cookies.token)) { return true; }
+    if (token.params && token.params.token && grants.has(token.params.token)) { return true; }
+    if (token.cookies && token.cookies.token && grants.has(token.cookies.token)) { return true; }
 
     return false;
 }

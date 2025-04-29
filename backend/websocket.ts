@@ -32,9 +32,11 @@ export default class MyWebSocket {
         console.log(`${uuid} connected`)
 
         connection.on("close", () => this.handleClose(uuid))
-
-        console.log("sending api token " + uuid);
-        connection.send(JSON.stringify({action: "token", token: uuid}));
+        connection.on("message", (event) => {
+            console.log("socket message called with " + event);
+            const data = JSON.parse(event);
+            this.handleMessage(connection, data)
+        })
     }
 
     isLoggedIn(token) {
@@ -63,6 +65,30 @@ export default class MyWebSocket {
         for (let uuid of keys) {
             const connection = this.connections.get(uuid);
             connection.send(message)
+        }
+    }
+
+    handleMessage(connection:any, json:any) {
+        if (json.action == "apiTokenVerify") {
+            let token = json.token;
+
+            if (token && token.length > 0) {
+                if (this.connections.has(token)) {
+                    const oldConnection = this.connections.get(token);
+
+                    if (oldConnection !== connection) {
+                        console.log("old socket connection for " + token + " discarded");
+                        oldConnection?.terminate();
+                    }
+                }
+            } else {
+                token = v4();
+                console.log("creating new api token " + token)
+            }
+
+            this.connections.set(token, connection);
+            const message = JSON.stringify({ action: "token", token: token });
+            connection.send(message);
         }
     }
 }

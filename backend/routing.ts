@@ -198,9 +198,6 @@ sectigo.com
     app.post('/comment', (req, res) => {
         console.log("post comment called with " + JSON.stringify(req.body));
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        console.log("post called from " + ip);
-
-        //console.log("headers: " + JSON.stringify(req.headers));
 
         const json = req.body;
         if (!json.comment) {
