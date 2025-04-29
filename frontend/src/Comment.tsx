@@ -96,6 +96,8 @@ const Comment:React.FC<CommentProps> = ({
         if (messageRef.scrollHeight > messageRef.clientHeight || isExpanded) {
             console.log("found overflowing message " + localComment.id);
             setIsOverFlowing(true);
+        } else {
+            setIsOverFlowing(false);
         }
     }, [isExpanded, localComment, isOverFlowing, messageRef])
 

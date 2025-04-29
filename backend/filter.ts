@@ -10,7 +10,7 @@ const blackList = new Map<string, string[]>([
     ["cody", ["[redacted]"]],
     ["munger", ["and her three legged dog Snake"]],
     ["reno", ["Scottsdale", "Houston", "Salt Lake City", "St. Petersburg"]],
-    ["nevada", ["Arizona"]]
+    ["nevada", ["Arizona", "Texas", "Florida"]]
 ]);
 
 

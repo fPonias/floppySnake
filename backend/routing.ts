@@ -224,7 +224,7 @@ sectigo.com
             console.log("comment " + original + " filtered to " + comment);
         }
 
-        createComment(token, comment, name, postid, parent, original)
+        createComment(token, comment, name, postid, parent, original, ip)
             .then(response => {
                 console.log("post comment successful");
                 res.status(200).send(response);

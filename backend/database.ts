@@ -93,7 +93,8 @@ export const createComment = async (
     name: string | null,
     postid: number, 
     parent:number | null,
-    original: string | null
+    original: string | null,
+    ip: string | null,
 ):Promise<CommentEntry | null> => {
     try {
         if(!MyWebSocket.instance.isLoggedIn(token)) {
@@ -114,7 +115,7 @@ export const createComment = async (
 
         const short = comment.substring(0, 400);
         text = "INSERT INTO comment (parent, posted, updated, comment, name, ip, postid, original) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)";
-        const values = [parent, now, now, short, name, token, postid, original ?? ""];
+        const values = [parent, now, now, short, name, ip, postid, original ?? ""];
         result = await pool.query(text, values);
         if (result && result.rows) {
             const ret = result.rows[0];

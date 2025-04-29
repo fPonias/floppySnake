@@ -48,7 +48,6 @@
 #minusOne .comment {
     border-top: solid 1px;
     padding: 10px 0px;
-    width: 100%;
     overflow: auto;
 }
 
@@ -76,6 +75,7 @@
 
 #minusOne .comment .commentLeft {
     float: left;
+    clear: left;
 }
 
 #minusOne .comment .admin {
