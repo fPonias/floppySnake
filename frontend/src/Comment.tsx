@@ -1,9 +1,10 @@
-import { useContext, useEffect, useState } from "react";
+import React, { JSX, useContext, useEffect, useState } from "react";
 import CommentEntry from "./CommentEntry";
 import { FormComponent } from "./Form";
 import { AppContext } from "./App";
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
+import { findHyperlinks } from "./CommentUtil";
 
 interface CommentProps {
     comment: CommentEntry,
@@ -101,7 +102,27 @@ const Comment:React.FC<CommentProps> = ({
         }
     }, [isExpanded, localComment, isOverFlowing, messageRef])
 
-    function renderMessage() {
+    function renderMessageParts(message:string):JSX.Element[] {
+        const ret:JSX.Element[] = [];
+        const parts = findHyperlinks(message);
+
+        for (let i = 0; i < parts.length; i++) {
+            if (i % 2 == 0) {
+                const parsed = parts[i].split("\n");
+                for (let j = 0; j < parsed.length; j++) {
+                    if (j > 0) {
+                        ret.push((<br/>));
+                    }
+                    ret.push((<>{parsed[j]}</>));
+                }
+            } else {
+                ret.push((<a target="_blank" rel="noopener noreferrer" href={parts[i]}>{parts[i]}</a>));
+            }
+        }
+        return ret;
+    }
+
+    function renderMessage():JSX.Element {
         let messageClass = "message"
         let link = (<></>)
         if (isOverFlowing) {
@@ -124,10 +145,10 @@ const Comment:React.FC<CommentProps> = ({
             }
         }
 
-        const parsed = localComment.comment.split("\n");
-
         return (<>
-            <div className={messageClass} ref={(ref) => {setMessageRef(ref)}}>{parsed.map((str) => {return (<>{str}<br/></>)})}</div>
+            <div className={messageClass} ref={(ref) => {setMessageRef(ref)}}>
+                {renderMessageParts(localComment.comment)}
+            </div>
             {link}
         </>)
     }

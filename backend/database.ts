@@ -104,6 +104,7 @@ export const createComment = async (
 
         const now = new Date().getTime();
 
+        /*
         let text = "SELECT updated FROM comment WHERE ip=$1 ORDER BY updated DESC LIMIT 1"
         let result = await pool.query(text, [token]);
         if (result.rows.length > 0) {
@@ -112,11 +113,12 @@ export const createComment = async (
                 throw new Error("comment posted too quickly");
             }
         }
+        */
 
         const short = comment.substring(0, 400);
-        text = "INSERT INTO comment (parent, posted, updated, comment, name, ip, postid, original) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)";
-        const values = [parent, now, now, short, name, ip, postid, original ?? ""];
-        result = await pool.query(text, values);
+        let text = "INSERT INTO comment (parent, posted, updated, comment, name, postid, original) VALUES ($1, $2, $3, $4, $5, $6, $7)";
+        const values = [parent, now, now, short, name, postid, original ?? ""];
+        let result = await pool.query(text, values);
         if (result && result.rows) {
             const ret = result.rows[0];
 
