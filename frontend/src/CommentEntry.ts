@@ -256,16 +256,19 @@ export class CommentEntries {
         return false;
     }
 
-    async deletePost(id: number) {
+    async deletePost(id: number): Promise<number> {
         try {
             const url = env.api + "/comment/" + id + "/" + this.adminToken;
-            await fetch(url, {
+            const resp = await fetch(url, {
                 method: 'DELETE',
                 credentials: "include"
             });
+            return resp.status;
         } catch (err) {
             console.log("failed to delete post entry " + JSON.stringify(err));
         }
+
+        return 0;
     }
 
     async flagPost(id: number) {

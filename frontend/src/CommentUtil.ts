@@ -32,15 +32,15 @@ export function findHyperlinks(message:string):string[] {
 
 
     if (found) {
-        let end = i
-        for (end = i; end < message.length; end++) {
+        let end = idx + i
+        for (end = idx + i; end < message.length; end++) {
             const ch = message[end];
             if (ch == ' ' || ch == '\n') {
                 break;
             }
         }
 
-        const link = message.substring(idx, idx + end);
+        const link = message.substring(idx, end);
 
         const first = message.substring(0, idx);
         const sub = findHyperlinks(message.substring(end));

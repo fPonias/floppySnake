@@ -41,7 +41,7 @@ function App() {
 
     const ws = useRef<WebSocketHook | undefined>(undefined);
 
-    const [cookies, setCookie] = useCookies(["token", "name"]);
+    const [cookies, setCookie, unsetCookie] = useCookies(["token", "name"]);
     const [triggerUpdate, setTriggerUpdate] = useState(0);
     
     appContext.onPosted = function() {
@@ -130,7 +130,11 @@ function App() {
     async function deleteClicked(id:number) {
         if (!appContext.adminEnabled) { return; }
 
-        await appContext.commentBackend?.deletePost(id);
+        const result = await appContext.commentBackend?.deletePost(id);
+        if (result == 401) {
+            appContext.adminEnabled = false;
+            unsetCookie("token");
+        }
     }
 
     async function firstLoad() {
