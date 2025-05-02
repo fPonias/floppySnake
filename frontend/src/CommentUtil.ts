@@ -13,11 +13,9 @@ export function findHyperlinks(message:string):string[] {
     if (idx == -1) { return [message]; }
 
     let url = "";
-    let found = true;
+    let found = false;
     let i = 0;
     for (url of webWhitelist) {
-        found = true;
-        
         for (i = 0; i < url.length; i++) {
             if (url[i] != message[idx + i + 8]) {
                 found = false;
@@ -25,11 +23,11 @@ export function findHyperlinks(message:string):string[] {
             }
         }
 
-        if (found) {
+        if (i == url.length) {
+            found = true;
             break;
         }
     }
-
 
     if (found) {
         let end = idx + i
