@@ -72,6 +72,7 @@ const Comment:React.FC<CommentProps> = ({
     const appContext = useContext(AppContext);
     const [localComment, setComment] = useState(comment);
     const [time, setTime] = useState("");
+    const [lyingIndex, setLyingIndex] = useState(Math.floor(Math.random() * lyingImages.length));
 
     function renderReply() {
         if (hasActiveReply) {
@@ -128,9 +129,7 @@ const Comment:React.FC<CommentProps> = ({
 
     function renderFlaggedContent(isFlagged:Boolean):JSX.Element {
         if (!isFlagged) { return (<></>)}
-
-        const idx = Math.floor(Math.random() * lyingImages.length);
-        const image = lyingImages[idx];
+        const image = lyingImages[lyingIndex];
         return (<img src={image} className="flaggedImage"/>)
     }
 
@@ -193,7 +192,7 @@ const Comment:React.FC<CommentProps> = ({
     const name = (localComment.name) ? localComment.name : "anonymous coward";
     return (<>
         <div className='comment' key={"comment-" + localComment.id} id={localComment.id.toString()} style={{ marginLeft: indent + "px" }}>
-            <div className="commentLeft" style={(localComment.flagged) ? {minHeight: 100} : {}}>
+            <div className="commentLeft" style={(localComment.flagged) ? {minHeight: 160} : {}}>
                 <div className='header'><span className='name'>{name}</span><span className='time'>{time}</span></div>
                 {renderMessage()}
                 <div className="reply" onClick={() => { onReply(localComment.id) }}>

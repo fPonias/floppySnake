@@ -22,10 +22,12 @@ export function filterString(input:string):string {
     const z = 'z'.charCodeAt(0);
     const A = 'A'.charCodeAt(0);
     const Z = 'Z'.charCodeAt(0);
+    const sqbrl = '['.charCodeAt(0);
+    const sqbrr = ']'.charCodeAt(0);
     
     for (let i = 0; i < input.length; i++) {
         let intval = input.charCodeAt(i);
-        if (intval >= a && intval <= z) {
+        if ((intval >= a && intval <= z) || intval == sqbrl || intval == sqbrr) {
             index.push(i);
             stripped.push(String.fromCharCode(intval));
         } else if (intval >= A && intval <= Z) {
