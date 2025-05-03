@@ -52,7 +52,10 @@ export const getComment = async (id:number): Promise<any> => {
 }
 export const flagComment = async(id:number):Promise<any> => {
     try {
-        const res = await pool.query("UPDATE comment SET flagged=true WHERE id = $1", [id]);
+        const now = new Date().getTime();
+        const res = await pool.query("UPDATE comment SET flagged=true, updated=$2 WHERE id = $1", [id, now]);
+
+        updateParent(id, now);
         return true;
     } catch (err) {
         console.error(err);
@@ -94,7 +97,6 @@ export const createComment = async (
     postid: number, 
     parent:number | null,
     original: string | null,
-    ip: string | null,
 ):Promise<CommentEntry | null> => {
     try {
         if(!MyWebSocket.instance.isLoggedIn(token)) {
@@ -104,7 +106,10 @@ export const createComment = async (
 
         const now = new Date().getTime();
 
-        let text = "SELECT updated FROM comment WHERE ip=$1 ORDER BY updated DESC LIMIT 1"
+        let text = `SELECT comment.updated FROM comment
+            JOIN visitor ON visitor.id = comment.visitorid
+            WHERE visitor.token=$1 ORDER BY updated DESC LIMIT 1
+        `;
         let result = await pool.query(text, [token]);
         if (result.rows.length > 0) {
             const diff = now - result.rows[0].updated;
@@ -114,8 +119,12 @@ export const createComment = async (
         }
 
         const short = comment.substring(0, 400);
-        text = "INSERT INTO comment (parent, posted, updated, comment, name, ip, postid, original) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)";
-        const values = [parent, now, now, short, name, ip, postid, original ?? ""];
+        text = `INSERT INTO comment (parent, name, posted, updated, comment, postid, original, flagged, visitorid)
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8, (
+                SELECT id AS visitorid FROM visitor WHERE token = $9
+            ))
+        `;
+        const values = [parent, name, now, now, short, postid, original ?? "", false, token];
         result = await pool.query(text, values);
         if (result && result.rows) {
             const ret = result.rows[0];
@@ -196,4 +205,55 @@ export async function createPost(url: string): Promise<number | null> {
     }
 
     return null;
+}
+
+export async function checkIp(ip: string): Promise<number | null> {
+    try {
+        let text = "SELECT id FROM ip WHERE address = $1";
+        let result = await pool.query(text, [ip]);
+
+        if (result.rows.length == 0) {
+            console.log("new ip visit " + ip);
+            text = "INSERT INTO ip (address, firstVisited) VALUES ($1, $2) RETURNING id";
+            result = await pool.query(text, [ip, new Date().getTime()]);
+
+            return result.rows[0].id;
+        } else {
+            return result.rows[0].id
+        }
+    } catch (error) {
+        console.error(error);
+    }
+
+    return null;
+}
+
+export async function checkToken(token: string, ip:string) {
+    try {
+        let text = "SELECT id FROM visitor WHERE token = $1";
+        let result = await pool.query(text, [token]);
+
+        let visitorid  = 0;
+        if (result.rows.length == 0) {
+            console.log("new visitor");
+            text = "INSERT INTO visitor (token, flagged) VALUES ($1, 0) RETURNING id";
+            result = await pool.query(text, [token]);
+            visitorid = result.rows[0].id;
+        } else {
+            visitorid = result.rows[0].id;
+        }
+
+        const ipid = await checkIp(ip);
+        
+        text = "SELECT visitorid, ipid FROM ip_visitor WHERE visitorid = $1 and ipid = $2";
+        result = await pool.query(text, [visitorid, ipid]);
+
+        if (result.rows.length == 0) {
+            console.log("new visitor token ip pairing");
+            text = "INSERT INTO ip_visitor (visitorid, ipid) VALUES ($1, $2)";
+            result = await pool.query(text, [visitorid, ipid]);
+        }
+    } catch (error) {
+        console.error(error);
+    }
 }

@@ -12,6 +12,7 @@ import MyWebSocket from './websocket';
 import {WebSocketServer} from 'ws';
 import { resetKey } from './adminKey';
 import cookieParser from 'cookie-parser';
+import { checkIp } from './database';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -43,6 +44,13 @@ const accessLogStream = fs.createWriteStream(
 
 // setup the logger
 app.use(morgan('common', { stream: accessLogStream }));
+
+const ipSaver = async function (req, res, next) {
+    await checkIp(req.ip);
+    next();
+}
+
+app.use(ipSaver);
 
 app.use(cookieParser());
 app.use(cors({

@@ -9,8 +9,8 @@ export default class CommentEntry {
     posted: number
     updated: number
     comment: string
+    flagged: boolean
     name: string | null
-    ip: string
 
     constructor(row:any) {
         this.id = row.id;
@@ -18,7 +18,7 @@ export default class CommentEntry {
         this.posted = Number.parseInt(row.posted);
         this.updated = Number.parseInt(row.updated);
         this.comment = row.comment;
-        this.ip = row.ip;
+        this.flagged = row.flagged;
         this.name = row.name;
 
         this.children = [];

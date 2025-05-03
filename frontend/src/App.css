@@ -76,6 +76,7 @@
 #minusOne .comment .commentLeft {
     float: left;
     clear: left;
+    position: relative;
 }
 
 #minusOne .comment .admin {
@@ -84,4 +85,12 @@
 
 #minusOne .comment .admin .delete {
     margin-bottom: 20px;
+}
+
+#minusOne .comment .flaggedImage {
+    width: 100px;
+    height: 100px;
+    position: absolute;
+    left:50px;
+    top: 0px;
 }

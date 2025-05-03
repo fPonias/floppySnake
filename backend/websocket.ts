@@ -2,8 +2,16 @@ import env2 from '../env';
 import { WebSocketServer } from "ws";
 import { v4 } from "uuid";
 import url from "url";
+import { checkToken } from './database';
 
 const env = (env2.default) ? env2.default : env2;
+
+interface connectionData {
+    connection: any,
+    id: number,
+    token: string | undefined,
+    ip: string,
+}
 
 export default class MyWebSocket {
     private static _instance: MyWebSocket | undefined = undefined;
@@ -27,27 +35,38 @@ export default class MyWebSocket {
     }
 
     private onConnected(connection, request) {
-        const uuid = v4()
-        this.connections.set(uuid, connection);
-        console.log(`${uuid} connected`)
+        const connData:connectionData = {
+            connection: connection,
+            id: this.connectionsNextId,
+            ip: request.socket.remoteAddress,
+            token: undefined
+        };
+        console.log("connection " + connData.id + " opened");
+        this.connections.set(connData.id, connData);
+        this.connectionsNextId += 1;
 
-        connection.on("close", () => this.handleClose(uuid))
+        connection.on("close", () => this.handleClose(connData))
         connection.on("message", (event) => {
             console.log("socket message called with " + event);
             const data = JSON.parse(event);
-            this.handleMessage(connection, data)
+            this.handleMessage(connData, connection, data)
         })
     }
 
     isLoggedIn(token) {
-        return this.connections.has(token);
+        return this.tokenIndex.has(token);
     }
 
-    connections = new Map<string, any>();
+    connectionsNextId = 1;
+    connections = new Map<number, connectionData>();
+    tokenIndex = new Set<string>();
 
-    private handleClose(uuid) {
-        console.log(`${uuid} disconnected`)
-        this.connections.delete(uuid);
+    private handleClose(connData:connectionData) {
+        console.log(`${connData.id} disconnected`);
+        this.connections.delete(connData.id);
+        if (connData.token) {
+            this.tokenIndex.delete(connData.token);
+        }
     }
 
     broadcastNewPost(postid: number, updated: number) {
@@ -62,23 +81,23 @@ export default class MyWebSocket {
 
     sendBroadcast(message:string) {
         const keys = this.connections.keys();
-        for (let uuid of keys) {
-            const connection = this.connections.get(uuid);
-            connection.send(message)
+        for (let id of keys) {
+            const connData = this.connections.get(id);
+            connData?.connection.send(message)
         }
     }
 
-    handleMessage(connection:any, json:any) {
+    handleMessage(connData:connectionData, connection:any, json:any) {
         if (json.action == "apiTokenVerify") {
             let token = json.token;
 
             if (token && token.length > 0) {
-                if (this.connections.has(token)) {
-                    const oldConnection = this.connections.get(token);
+                if (this.connections.has(connData.id)) {
+                    const oldConnection = this.connections.get(connData.id);
 
-                    if (oldConnection !== connection) {
+                    if (oldConnection?.connection !== connection) {
                         console.log("old socket connection for " + token + " discarded");
-                        oldConnection?.terminate();
+                        oldConnection?.connection.terminate();
                     }
                 }
             } else {
@@ -86,7 +105,9 @@ export default class MyWebSocket {
                 console.log("creating new api token " + token)
             }
 
-            this.connections.set(token, connection);
+            checkToken(token, connData.ip);
+            connData.token = token;
+            this.tokenIndex.add(token);
             const message = JSON.stringify({ action: "token", token: token });
             connection.send(message);
         }

@@ -1,10 +1,15 @@
-import { useContext, useEffect, useState } from "react";
+import { JSX, useContext, useEffect, useState } from "react";
 import CommentEntry from "./CommentEntry";
 import { FormComponent } from "./Form";
 import { AppContext } from "./App";
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
 import useMount from "./useMount";
+import Lying01 from "./assets/lying01.jpg"
+import Lying02 from "./assets/lying02.jpg"
+import Lying03 from "./assets/lying03.jpg"
+import Lying04 from "./assets/lying04.jpg"
+import Lying05 from "./assets/lying05.jpg"
 
 interface CommentProps {
     comment: CommentEntry,
@@ -16,6 +21,10 @@ interface CommentProps {
     onExpanded?: (id: number, expanded: boolean) => void,
     indent?: number,
 }
+
+const lyingImages = [
+    Lying01, Lying02, Lying03, Lying04, Lying05
+];
 
 const Comment:React.FC<CommentProps> = ({
     comment,
@@ -116,7 +125,15 @@ const Comment:React.FC<CommentProps> = ({
         updateTime();
     }, [localComment]);
 
-    function renderMessage() {
+    function renderFlaggedContent(isFlagged:Boolean):JSX.Element {
+        if (!isFlagged) { return (<></>)}
+
+        const idx = Math.floor(Math.random() * lyingImages.length);
+        const image = lyingImages[idx];
+        return (<img src={image} className="flaggedImage"/>)
+    }
+
+    function renderMessage():JSX.Element {
         let messageClass = "message"
         let link = (<></>)
         if (isOverFlowing) {
@@ -139,18 +156,21 @@ const Comment:React.FC<CommentProps> = ({
             }
         }
 
+        const isFlagged = localComment.flagged;
+
         const parsed = localComment.comment.split("\n");
 
         return (<>
             <div className={messageClass} ref={(ref) => {setMessageRef(ref)}}>{parsed.map((str) => {return (<>{str}<br/></>)})}</div>
             {link}
+            {renderFlaggedContent(isFlagged)}
         </>)
     }
 
     const name = (localComment.name) ? localComment.name : "anonymous coward";
     return (<>
         <div className='comment' key={"comment-" + localComment.id} id={localComment.id.toString()} style={{ marginLeft: indent + "px" }}>
-            <div className="commentLeft">
+            <div className="commentLeft" style={(localComment.flagged) ? {minHeight: 100} : {}}>
                 <div className='header'><span className='name'>{name}</span><span className='time'>{time}</span></div>
                 {renderMessage()}
                 <div className="reply" onClick={() => { onReply(localComment.id) }}>

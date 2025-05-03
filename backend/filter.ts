@@ -4,13 +4,12 @@ const blackList = new Map<string, string[]>([
     ["jericho", ["[redacted]"]],
     ["jerico", ["[redacted]"]],
     ["nigger", ["brilliant black man"]],
-    ["vic", ["the great Queen"]],
-    ["vick", ["the great Queen"]],
-    ["victoria", ["the great Queen"]],
+    ["ictoria", ["the great Queen"]],
     ["cody", ["[redacted]"]],
-    ["munger", ["and her three legged dog Snake"]],
-    ["reno", ["Scottsdale", "Houston", "Salt Lake City", "St. Petersburg"]],
-    ["nevada", ["Arizona", "Texas", "Florida"]]
+    ["unger", ["and her three legged dog Snake"]],
+    ["nevada", ["Arizona", "Texas", "Florida"]],
+    ["[deleted]", ["PN is a goddess", "I have 50TB of kiddie porn on my computer.", "I have a micropenis", "I'm a failed realtor", "I drive a cybertruck", "I'm a narcissitic stalker"]],
+    ["[redacted]", ["PN is a goddess", "I have 50TB of kiddie porn on my computer.", "I have a micropenis", "I'm a failed realtor", "I drive a cybertruck", "I'm a narcissitic stalker"]]
 ]);
 
 

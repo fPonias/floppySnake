@@ -188,7 +188,15 @@ sectigo.com
 
         flagComment(req.params.id)
             .then(response => {
-                res.status(200).send(response);
+                if (!response) {
+                    res.status(500).send("flag failed");
+                } else {
+                    res.status(200).send(response);
+                    console.log("sending socket broadcast with id " + req.params.id + " and time " + response);
+                    const id = Number.parseInt(req.params.id);
+
+                    MyWebSocket.instance.broadcastUpdatePost(id);
+                }
             })
             .catch(error => {
                 res.status(500).send(error);
@@ -197,7 +205,6 @@ sectigo.com
 
     app.post('/comment', (req, res) => {
         console.log("post comment called with " + JSON.stringify(req.body));
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
         const json = req.body;
         if (!json.comment) {
@@ -221,7 +228,7 @@ sectigo.com
             console.log("comment " + original + " filtered to " + comment);
         }
 
-        createComment(token, comment, name, postid, parent, original, ip)
+        createComment(token, comment, name, postid, parent, original)
             .then(response => {
                 console.log("post comment successful");
                 res.status(200).send(response);
