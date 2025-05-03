@@ -8,7 +8,6 @@ import env from '../../env'
 import { WebSocketHook } from 'react-use-websocket/dist/lib/types';
 import { useCookies } from "react-cookie";
 import Comment from './Comment';
-import { v4 } from "uuid";
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
 
@@ -158,7 +157,7 @@ function App() {
         const result = await appContext.commentBackend?.deletePost(id);
         if (result == 401) {
             appContext.adminEnabled = false;
-            unsetCookie("token");
+            removeCookie("token");
         }
     }
 

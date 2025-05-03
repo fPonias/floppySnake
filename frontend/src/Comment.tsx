@@ -4,7 +4,6 @@ import { FormComponent } from "./Form";
 import { AppContext } from "./App";
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
-import useMount from "./useMount";
 import Lying01 from "./assets/lying01.jpg"
 import Lying02 from "./assets/lying02.jpg"
 import Lying03 from "./assets/lying03.jpg"
@@ -72,7 +71,7 @@ const Comment:React.FC<CommentProps> = ({
     const appContext = useContext(AppContext);
     const [localComment, setComment] = useState(comment);
     const [time, setTime] = useState("");
-    const [lyingIndex, setLyingIndex] = useState(Math.floor(Math.random() * lyingImages.length));
+    const [lyingIndex, _setLyingIndex] = useState(Math.floor(Math.random() * lyingImages.length));
 
     function renderReply() {
         if (hasActiveReply) {
@@ -120,7 +119,7 @@ const Comment:React.FC<CommentProps> = ({
     }
 
     useEffect(() => {
-        EventEmitter.subscribe("clockTick", (event: any) => {
+        EventEmitter.subscribe("clockTick", (_event: any) => {
             updateTime();
         })
 
@@ -177,8 +176,6 @@ const Comment:React.FC<CommentProps> = ({
         }
 
         const isFlagged = localComment.flagged;
-
-        const parsed = localComment.comment.split("\n");
 
         return (<>
             <div className={messageClass} ref={(ref) => {setMessageRef(ref)}}>
