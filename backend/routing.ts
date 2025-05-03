@@ -52,6 +52,26 @@ sectigo.com
         })
     }
 
+    app.get('/img/:file', (req, res, next) => {
+        const file = req.params.file
+        console.log("static /img/" + file + " called")
+        const pth = path.join("./img/", file)
+        fs.readFile(pth, (err, data) => {
+            if (err) {
+                res.status(500).send(err);
+                return;
+            }
+
+            let contentType = "";
+            if (file.endsWith(".jpg")) {
+                contentType = "image/jpeg";
+            } 
+
+            res.setHeader("Content-Type", contentType);
+            res.status(200).send(data)
+        })
+    });
+
     app.get('/', (req, res) => {
         console.log("static / called")
         getStatic('/index.html', res);

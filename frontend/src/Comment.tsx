@@ -4,12 +4,8 @@ import { FormComponent } from "./Form";
 import { AppContext } from "./App";
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
-import Lying01 from "./assets/lying01.jpg"
-import Lying02 from "./assets/lying02.jpg"
-import Lying03 from "./assets/lying03.jpg"
-import Lying04 from "./assets/lying04.jpg"
-import Lying05 from "./assets/lying05.jpg"
-import { findHyperlinks } from "./CommentUtil";
+import { findHyperlinks } from "./CommentUtil"; 
+import env from "../../env"
 
 interface CommentProps {
     comment: CommentEntry,
@@ -22,8 +18,13 @@ interface CommentProps {
     indent?: number,
 }
 
+const lyingPrefix = env.api + "/img";
 const lyingImages = [
-    Lying01, Lying02, Lying03, Lying04, Lying05
+    lyingPrefix + "lying01.jpg",
+    lyingPrefix + "lying02.jpg",
+    lyingPrefix + "lying03.jpg",
+    lyingPrefix + "lying04.jpg",
+    lyingPrefix + "lying05.jpg",
 ];
 
 const Comment:React.FC<CommentProps> = ({
