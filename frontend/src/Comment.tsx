@@ -1,4 +1,4 @@
-import { JSX, useContext, useEffect, useState } from "react";
+import React, { JSX, useContext, useEffect, useState } from "react";
 import CommentEntry from "./CommentEntry";
 import { FormComponent } from "./Form";
 import { AppContext } from "./App";
@@ -10,6 +10,7 @@ import Lying02 from "./assets/lying02.jpg"
 import Lying03 from "./assets/lying03.jpg"
 import Lying04 from "./assets/lying04.jpg"
 import Lying05 from "./assets/lying05.jpg"
+import { findHyperlinks } from "./CommentUtil";
 
 interface CommentProps {
     comment: CommentEntry,
@@ -133,6 +134,26 @@ const Comment:React.FC<CommentProps> = ({
         return (<img src={image} className="flaggedImage"/>)
     }
 
+    function renderMessageParts(message:string):JSX.Element[] {
+        const ret:JSX.Element[] = [];
+        const parts = findHyperlinks(message);
+
+        for (let i = 0; i < parts.length; i++) {
+            if (i % 2 == 0) {
+                const parsed = parts[i].split("\n");
+                for (let j = 0; j < parsed.length; j++) {
+                    if (j > 0) {
+                        ret.push((<br/>));
+                    }
+                    ret.push((<>{parsed[j]}</>));
+                }
+            } else {
+                ret.push((<a target="_blank" rel="noopener noreferrer" href={parts[i]}>{parts[i]}</a>));
+            }
+        }
+        return ret;
+    }
+
     function renderMessage():JSX.Element {
         let messageClass = "message"
         let link = (<></>)
@@ -161,7 +182,9 @@ const Comment:React.FC<CommentProps> = ({
         const parsed = localComment.comment.split("\n");
 
         return (<>
-            <div className={messageClass} ref={(ref) => {setMessageRef(ref)}}>{parsed.map((str) => {return (<>{str}<br/></>)})}</div>
+            <div className={messageClass} ref={(ref) => {setMessageRef(ref)}}>
+                {renderMessageParts(localComment.comment)}
+            </div>
             {link}
             {renderFlaggedContent(isFlagged)}
         </>)

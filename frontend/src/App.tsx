@@ -155,7 +155,11 @@ function App() {
     async function deleteClicked(id:number) {
         if (!appContext.adminEnabled) { return; }
 
-        await appContext.commentBackend?.deletePost(id);
+        const result = await appContext.commentBackend?.deletePost(id);
+        if (result == 401) {
+            appContext.adminEnabled = false;
+            unsetCookie("token");
+        }
     }
 
     async function firstLoad() {

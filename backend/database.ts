@@ -146,7 +146,7 @@ export const createComment = async (
 export const deleteComment = async (id: number):Promise<number | null> => {
     try {
         const now = new Date().getTime();
-        const result = await pool.query("UPDATE comment SET comment = $1, updated = $2 WHERE id = $3", ["[deleted]", now, id])
+        const result = await pool.query("UPDATE comment SET name = $1, comment = $1, updated = $2 WHERE id = $3", ["[deleted]", now, id])
         return now;
     } catch (error) {
         console.error(error);

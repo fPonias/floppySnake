@@ -5,7 +5,7 @@ const grants:Set<string> = new Set();
 
 export function resetKey() {
     grants.clear()
-    key = randomUUID();
+    key = "only Cleopatra died from a snake bite";
     showKey();
 }
 
