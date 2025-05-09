@@ -116,6 +116,8 @@ export function FormComponent({
         }
     }
 
+    if (!appContext.allowPosts) { return (<></>)}
+
     return (<>
         <form id="postForm" ref={(ref) => { form.current = ref; }}>
             <div className="input">

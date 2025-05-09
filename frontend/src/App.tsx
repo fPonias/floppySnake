@@ -1,4 +1,4 @@
-import { createContext, JSX, useCallback, useContext, useRef, useState } from 'react'
+import { createContext, JSX, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import './App.css'
 import useMount from './useMount';
 import { FormComponent } from './Form';
@@ -26,6 +26,7 @@ export interface AppContextProps {
     visitorBackend: VisitorEntries | null,
     apiToken: string | null,
     adminEnabled: boolean,
+    allowPosts: boolean,
     expandedComments: Set<number>,
     activeReply: ActiveReplyData | null,
     onPosted: () => void,
@@ -37,6 +38,7 @@ export const AppContext = createContext<AppContextProps>({
     visitorBackend: null,
     apiToken: null,
     adminEnabled: false,
+    allowPosts: false,
     expandedComments: new Set(),
     activeReply: null,
     onPosted: () => {}
@@ -59,7 +61,8 @@ function App() {
         setTriggerUpdate(triggerUpdate + 1);
     }
 
-    ws.current = useWebSocket(env.socketUrl, {
+    const [socketUrl, setSocketUrl] = useState<string | null>(null);
+    ws.current = useWebSocket(socketUrl, {
         onOpen: () => {
             console.log('opened');
 
@@ -128,6 +131,10 @@ function App() {
                 if (appContext.visitorBackend) {
                     appContext.visitorBackend.fetchNewest();
                 }
+            } else if (data.action == "allowPosts") {
+                appContext.allowPosts = data.allowPosts;
+                setTriggerUpdate(triggerUpdate + 1);
+                setTriggerAdminUpdate(triggerAdminUpdate + 1);
             }
         },
     });
@@ -146,6 +153,25 @@ function App() {
     const userDataListener = useCallback(() => {
         setTriggerAdminUpdate(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
     }, [triggerAdminUpdate]);
+
+    useEffect(() => {
+        document.addEventListener("visibilitychange", visChngF);
+        visChngF();
+        // Specify how to clean up after this effect:
+        return () => {
+            window.removeEventListener("visibilitychange", visChngF);
+        };
+    }, []);
+
+    function visChngF() {
+        if (document.hidden) {
+            console.log("hidden means user is gone");
+            setSocketUrl(null);
+        } else {
+            console.log("visible means user is back");
+            setSocketUrl(env.socketUrl);
+        }
+    }
 
     useMount(() => {
         setLoading(true);
@@ -208,6 +234,9 @@ function App() {
     }
 
     async function firstLoad() {
+        const allow = await appContext.commentBackend?.getAllowPosts();
+        appContext.allowPosts = allow ?? false;
+
         await appContext.commentBackend?.getPost();
         await appContext.commentBackend?.getRecent();
         await appContext.commentBackend?.sortTree();
@@ -309,7 +338,7 @@ function App() {
         <div style={{marginBottom: "20px"}}>
             <AdminPanel userData={userData} aliasData={aliasData} key={triggerAdminUpdate} />
         </div>
-        <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
+        <FormComponent onAdminEnabled={(_) => onAdminEnabled()} key={triggerUpdate}/>
         <div className='comments'>
             {renderComments(0, comments)}
             {renderLoadMore()}

@@ -88,6 +88,11 @@ export default class MyWebSocket {
         this.sendBroadcast(message);
     }
 
+    broadcastAllowPosts(allowPosts:boolean) {
+        const message = JSON.stringify({ action: "allowPosts", allowPosts: allowPosts});
+        this.sendBroadcast(message);
+    }
+
     sendBroadcast(message:string) {
         const keys = this.connections.keys();
         for (let id of keys) {

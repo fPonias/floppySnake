@@ -107,6 +107,15 @@
     padding: 4px 10px;
 }
 
+#minusOne .admin .allowPostsDiv {
+    display: flex;
+    flex-direction: row;
+}
+
+#minusOne .admin .allowPostsDiv div {
+    margin-left: 20px
+}
+
 #minusOne .adminPanel {
     border: 1px solid;
     border-collapse: collapse;

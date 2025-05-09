@@ -89,6 +89,22 @@ export const AdminPanel:React.FC<AdminProps> = ({
         toggleNameList(event, id, nameListOpen) 
     }
 
+    function setAllowPosts(value: boolean) {
+        if (!appContext.commentBackend) { return; }
+        if (!appContext.adminBackend?.adminToken) { return; }
+        appContext.commentBackend.adminToken = appContext.adminBackend.adminToken;
+        appContext.commentBackend.setAllowPosts(value);
+    }
+
+    function renderAllowPosts() {
+        return (
+            <div className="allowPostsDiv">
+                <input type="checkbox" checked={appContext.allowPosts} onChange={() => { setAllowPosts(!appContext.allowPosts) }} />
+                <div>Allow posts</div>
+            </div>
+        )
+    }
+
     if (!appContext.adminEnabled || !appContext.adminBackend) { return (<></>) }
 
 
@@ -98,7 +114,7 @@ export const AdminPanel:React.FC<AdminProps> = ({
 
         return false;
     })
-    return (<div>
+    return (<div className="admin">
         <table className="adminPanel">
             <thead><tr><th>id</th><th>name</th><th>posts</th><th>flagged</th><th>active</th><th>alias</th></tr></thead>
             <tbody>
@@ -111,6 +127,7 @@ export const AdminPanel:React.FC<AdminProps> = ({
             </tbody>
         </table>
         {renderNameList()}
+        {renderAllowPosts()}
     </div>)
 };
 

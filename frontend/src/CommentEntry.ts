@@ -191,6 +191,31 @@ export class CommentEntries {
         }
     }
 
+    async getAllowPosts(): Promise<boolean> {
+        try {
+            const url = env.api + "/allowPosts";
+            const json = await fetch(url);
+            const data = await json.json();
+            return data;
+        } catch (err) {
+            return true;
+        }
+    }
+
+    async setAllowPosts(value: boolean) {
+        try {
+            const url = env.api + "/allowPosts/" + this.adminToken;
+            const body = JSON.stringify({ allowPosts: value });
+            await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: body
+            });
+        } catch (err) {}
+    }
+
     async getPost() {
         try {
             const enc = btoa(this.url);

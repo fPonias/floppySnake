@@ -153,6 +153,16 @@ const Comment:React.FC<CommentProps> = ({
         return ret;
     }
 
+    function renderReplyButton():JSX.Element {
+        if (!appContext.allowPosts) return (<></>)
+        
+        return (
+            <div className="reply" onClick={() => { onReply(localComment.id) }}>
+                <a>Reply</a>
+            </div>
+        )
+    }
+
     function renderMessage():JSX.Element {
         let messageClass = "message"
         let link = (<></>)
@@ -203,9 +213,7 @@ const Comment:React.FC<CommentProps> = ({
                     <span className='time'>{time}</span>
                 </div>
                 {renderMessage()}
-                <div className="reply" onClick={() => { onReply(localComment.id) }}>
-                    <a>Reply</a>
-                </div>
+                {renderReplyButton()}
             </div>
             {!appContext.adminEnabled ? (<></>) : (<div className="admin">
                 <div className="delete" onClick={() => { onDelete(localComment.id) }}>

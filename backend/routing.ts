@@ -22,6 +22,7 @@ import { authorize, isAuthorized } from './adminKey';
 import { filterString } from './filter';
 
 const env = (env2.default) ? env2.default : env2;
+let allowPosts = true;
 
 export default function setupRouting(app:any) {
     const wellKnownContent = `DCFED0EFA645CA8FE804941CE4DD4BC7F3CBA688DAFD88388C6122591BDDF88F
@@ -229,6 +230,10 @@ sectigo.com
 
     app.post('/comment', (req, res) => {
         console.log("post comment called with " + JSON.stringify(req.body));
+
+        if (!allowPosts) { 
+            res.status(500).send("nope");
+        }
 
         const json = req.body;
         if (!json.comment) {
@@ -438,5 +443,31 @@ sectigo.com
                 console.log("get user list failed with " + JSON.stringify(error));
                 res.status(500).send(error);
             })
+    })
+
+    app.get("/allowPosts", (req, res) => {
+        res.status(200).send(allowPosts ? "true" : "false");
+    })
+
+    app.post("/allowPosts{/:token}", (req, res) => {
+        console.log("set allow posts called");
+        if (!isAuthorized(req)) {
+            console.log("auth failed for allowPost action");
+            res.status(401).send();
+            return;
+        }
+
+        const json = req.body;
+        if (json.allowPosts === undefined) {
+            console.log("post allowPosts empty.");
+            res.status(500).send();
+            return;
+        }
+
+        allowPosts = json.allowPosts;
+        console.log("allow posts set to " + allowPosts);
+
+        res.status(200).send(allowPosts ? "true" : "false");
+        MyWebSocket.instance.broadcastAllowPosts(allowPosts);
     })
 }
