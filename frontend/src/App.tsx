@@ -225,7 +225,9 @@ function App() {
 
     async function deleteClicked(id:number) {
         if (!appContext.adminEnabled) { return; }
+        if (!appContext.commentBackend || !appContext.adminBackend) { return; }
 
+        appContext.commentBackend.adminToken = appContext.adminBackend.adminToken
         const result = await appContext.commentBackend?.deletePost(id);
         if (result == 401) {
             appContext.adminEnabled = false;
@@ -286,6 +288,9 @@ function App() {
     }
 
     function onCommentFlagged(id: number) {
+        if (!appContext.adminEnabled) { return; }
+        if (!appContext.commentBackend || !appContext.adminBackend) { return; }
+        appContext.commentBackend.adminToken = appContext.adminBackend.adminToken
         appContext.commentBackend?.flagPost(id);
     }
 

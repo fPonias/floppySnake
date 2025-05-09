@@ -18,7 +18,7 @@ interface CommentProps {
     indent?: number,
 }
 
-const lyingPrefix = env.api + "/img";
+const lyingPrefix = env.api + "/img/";
 const lyingImages = [
     lyingPrefix + "lying01.jpg",
     lyingPrefix + "lying02.jpg",
