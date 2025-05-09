@@ -10,7 +10,7 @@ import { useCookies } from "react-cookie";
 import Comment from './Comment';
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
-import { AdminTools, UserData } from './AdminTools';
+import { AdminTools } from './AdminTools';
 import { AdminPanel } from './Admin';
 import VisitorEntries from './VisitorEntry';
 

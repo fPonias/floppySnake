@@ -1,7 +1,7 @@
 import React, { JSX, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppContext } from "./App";
 import { UserData } from "./AdminTools";
-import VisitorEntries, { VisitorEntry } from "./VisitorEntry";
+import { VisitorEntry } from "./VisitorEntry";
 import useMount from "./useMount";
 
 interface AdminProps {
@@ -118,7 +118,7 @@ export const AdminPanel:React.FC<AdminProps> = ({
         <table className="adminPanel">
             <thead><tr><th>id</th><th>name</th><th>posts</th><th>flagged</th><th>active</th><th>alias</th></tr></thead>
             <tbody>
-            {filtered.map((value, i) => {
+            {filtered.map((value, _) => {
                 const alias = aliasData.get(value.visitorid)
                 return (
                     <AdminLine userData={value} aliasData={alias} triggerAliasUpdate={triggerAliasUpdate} onNameClicked={onNameClicked}/>
@@ -148,7 +148,7 @@ const AdminLine: React.FC<AdminLineProps> = ({
     const [aliasLocal, setAliasLocal] = useState(aliasData?.alias ?? "");
 
     
-    function onAliasUpdatedLocal(evt: React.ChangeEvent<HTMLInputElement>, id: number) {
+    function onAliasUpdatedLocal(evt: React.ChangeEvent<HTMLInputElement>, _: number) {
         const value = evt.target.value;
         setAliasLocal(value);
     }
