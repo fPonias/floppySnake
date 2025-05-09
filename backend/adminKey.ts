@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 let key = randomUUID();
-const grants:Set<string> = new Set();
+let grants = new Set<string>();
 
 export function resetKey() {
     grants.clear()
@@ -10,9 +10,18 @@ export function resetKey() {
 }
 
 export function isAuthorized(token:any):boolean {
-    if (grants.has(token)) { return true; }
-    if (token.params && token.params.token && grants.has(token.params.token)) { return true; }
-    if (token.cookies && token.cookies.token && grants.has(token.cookies.token)) { return true; }
+    if (grants.has(token)) { 
+        console.log("grants has " + token)
+        return true; 
+    }
+    if (token.params && token.params.token && grants.has(token.params.token)) { 
+        console.log("grants has " + token.params.token)
+        return true; 
+    }
+    if (token.cookies && token.cookies.token && grants.has(token.cookies.token)) { 
+        console.log("grants has " + token.cookies.token)
+        return true; 
+    }
 
     return false;
 }
@@ -26,6 +35,7 @@ export function authorize(requestKey:string):string | null {
 
     const ret = randomUUID();
     grants.add(ret);
+    console.log("admin grants: " + JSON.stringify(grants));
 
     return ret;
 }

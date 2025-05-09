@@ -187,11 +187,21 @@ const Comment:React.FC<CommentProps> = ({
         </>)
     }
 
-    const name = (localComment.name) ? localComment.name : "anonymous coward";
+    const name = (localComment.name) ? localComment.name : "anon";
+    const visitor = appContext.visitorBackend?.entries.get(localComment.visitorid)
+    const alias = (visitor && visitor.alias) ? visitor.alias : undefined;
+    
+    let nameClass = "name"
+    if (alias) { nameClass += " censored"; }
+
     return (<>
         <div className='comment' key={"comment-" + localComment.id} id={localComment.id.toString()} style={{ marginLeft: indent + "px" }}>
             <div className="commentLeft" style={(localComment.flagged) ? {minHeight: 160} : {}}>
-                <div className='header'><span className='name'>{name}</span><span className='time'>{time}</span></div>
+                <div className='header'>
+                    <span className={nameClass}>{name}</span>
+                    {(alias) ? (<span className='name'>{alias}</span>) : (<></>)}
+                    <span className='time'>{time}</span>
+                </div>
                 {renderMessage()}
                 <div className="reply" onClick={() => { onReply(localComment.id) }}>
                     <a>Reply</a>

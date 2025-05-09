@@ -9,7 +9,7 @@ const blackList = new Map<string, string[]>([
     ["unger", ["and her three legged dog Snake"]],
     ["nevada", ["Arizona", "Texas", "Florida"]],
     ["[deleted]", ["PN is a goddess", "I have 50TB of kiddie porn on my computer.", "I have a micropenis", "I'm a failed realtor", "I drive a cybertruck", "I'm a narcissitic stalker"]],
-    ["[redacted]", ["PN is a goddess", "I have 50TB of kiddie porn on my computer.", "I have a micropenis", "I'm a failed realtor", "I drive a cybertruck", "I'm a narcissitic stalker"]]
+    ["greenbean", ["PN is a goddess", "I have 50TB of kiddie porn on my computer.", "I have a micropenis", "I'm a failed realtor", "I drive a cybertruck", "I'm a narcissitic stalker"]]
 ]);
 
 

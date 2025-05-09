@@ -3,6 +3,7 @@ import { WebSocketServer } from "ws";
 import { v4 } from "uuid";
 import url from "url";
 import { checkToken } from './database';
+import { authorize, getGrants, isAuthorized } from './adminKey';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -11,6 +12,7 @@ interface connectionData {
     id: number,
     token: string | undefined,
     ip: string,
+    isAdmin: boolean
 }
 
 export default class MyWebSocket {
@@ -39,7 +41,8 @@ export default class MyWebSocket {
             connection: connection,
             id: this.connectionsNextId,
             ip: request.socket.remoteAddress,
-            token: undefined
+            token: undefined,
+            isAdmin: false
         };
         console.log("connection " + connData.id + " opened");
         this.connections.set(connData.id, connData);
@@ -66,6 +69,7 @@ export default class MyWebSocket {
         this.connections.delete(connData.id);
         if (connData.token) {
             this.tokenIndex.delete(connData.token);
+            this.sendAdminBroadcast(JSON.stringify({action: "logout", data: connData.token}));
         }
     }
 
@@ -79,11 +83,27 @@ export default class MyWebSocket {
         this.sendBroadcast(message);
     }
 
+    broadcastUpdateAlias(after: number, visitorid: number) {
+        const message = JSON.stringify({ action: "alias", visitorid: visitorid, after: after});
+        this.sendBroadcast(message);
+    }
+
     sendBroadcast(message:string) {
         const keys = this.connections.keys();
         for (let id of keys) {
             const connData = this.connections.get(id);
             connData?.connection.send(message)
+        }
+    }
+
+    sendAdminBroadcast(message:string) {
+        const keys = this.connections.keys();
+        for (let id of keys) {
+            const connData = this.connections.get(id);
+            if (connData?.isAdmin) {
+                console.log("sending admin broadcast to " + JSON.stringify(connData.token))
+                connData.connection.send(message);
+            }
         }
     }
 
@@ -110,6 +130,34 @@ export default class MyWebSocket {
             this.tokenIndex.add(token);
             const message = JSON.stringify({ action: "token", token: token });
             connection.send(message);
+
+            this.sendAdminBroadcast(JSON.stringify({action: "login", token: token }));
+        } else if (json.action == "adminTokenVerify") {
+            let adminToken = json.token;
+            const isAdmin = isAuthorized(adminToken)
+            connData.isAdmin = isAdmin;
+
+            const message = JSON.stringify({ action: "isAdmin", result: isAdmin});
+            connection.send(message);
+        } else if (json.action == "adminTokenRequest") {
+            let password = json.password;
+            const adminToken = authorize(password);
+
+            connData.isAdmin = (adminToken) ? true : false;
+
+            const message = JSON.stringify({ action: "adminToken", result: adminToken });
+            connection.send(message);
         }
+    }
+
+    getActiveTokens():string[] {
+        const ret:string[] = [];
+        for (let item of this.connections.values()) {
+            if (item.token) {
+                ret.push(item.token);
+            }
+        }
+
+        return ret;
     }
 }

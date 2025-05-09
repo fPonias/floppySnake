@@ -11,6 +11,7 @@ export default class CommentEntry {
     comment: string
     flagged: boolean
     name: string | null
+    visitorid: number
 
     constructor(row:any) {
         this.id = row.id;
@@ -20,6 +21,7 @@ export default class CommentEntry {
         this.comment = row.comment;
         this.flagged = row.flagged;
         this.name = row.name;
+        this.visitorid = row.visitorid;
 
         this.children = [];
     };
@@ -52,8 +54,6 @@ export class CommentEntries {
     url: string = "";
     postid: number = 0;
     adminToken: string | null = null;
-
-
 
     constructor(url: string) {
         this.url = url;
@@ -217,43 +217,6 @@ export class CommentEntries {
             console.log("failed to fetch post data " + JSON.stringify(err));
             this.postid = 0;
         }
-    }
-
-    async requestAdmin(key: string):Promise<string | null> {
-        try {
-            const url = env.api + "/getAdmin/" + key;
-            const json = await fetch(url);
-            if (json.status == 200) {
-                const decoder = new TextDecoder();
-                const arr = await json.bytes();
-                const str = decoder.decode(arr);
-                this.adminToken = str;
-                return str;
-            } else {
-                console.log("failed to obtain authorization");
-                return null
-            }
-        } catch (err) {
-            console.log("failed to obtain authorization " + JSON.stringify(err));
-        }
-
-        return null;
-    }
-
-    async verifyAdmin(token: string): Promise<boolean> {
-        try {
-            const url = env.api + "/isAdmin/" + token;
-
-            const json = await fetch(url);
-            const decoder = new TextDecoder();
-            const arr = await json.bytes();
-            const str = decoder.decode(arr);
-            return (str == 'true') ? true : false;
-        } catch (err) {
-            console.log("failed to verify authorization " + JSON.stringify(err));
-        }
-
-        return false;
     }
 
     async deletePost(id: number): Promise<number> {

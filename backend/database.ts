@@ -146,7 +146,10 @@ export const createComment = async (
 export const deleteComment = async (id: number):Promise<number | null> => {
     try {
         const now = new Date().getTime();
-        const result = await pool.query("UPDATE comment SET name = $1, comment = $1, updated = $2 WHERE id = $3", ["[deleted]", now, id])
+        const original = await pool.query("SELECT comment FROM comment WHERE id = $1", [id]);
+        await pool.query("UPDATE comment SET name = $1, comment = $1, updated = $2, original = $4 WHERE id = $3", 
+            ["[deleted]", now, id, original.rows[0].comment]
+        );
         return now;
     } catch (error) {
         console.error(error);
@@ -256,4 +259,112 @@ export async function checkToken(token: string, ip:string) {
     } catch (error) {
         console.error(error);
     }
+}
+
+interface UserData {
+    commentCount: number,
+    flaggedCount: number,
+    lastPost: number,
+    visitorid: number,
+    token: string,
+    ipAddress: string,
+    names: string[]
+}
+
+export async function getUserData(): Promise<UserData[]> {
+    const text = `SELECT c.count, f.flagged, p.lastpost, v.token, v.id as visitorid, i.address
+		FROM visitor v
+        LEFT OUTER JOIN(SELECT COUNT(visitorid) count, visitorid FROM comment GROUP BY visitorid ORDER BY count DESC) c
+			ON (c.visitorid = v.id)
+        LEFT OUTER JOIN(SELECT COUNT(id) flagged, visitorid FROM comment WHERE flagged = true GROUP BY visitorid) f ON(f.visitorid = c.visitorid)
+        LEFT OUTER JOIN(SELECT MAX(posted) lastpost, visitorid FROM comment GROUP BY visitorid) p ON(p.visitorid = c.visitorid)
+        JOIN ip_visitor iv ON iv.visitorid = v.id
+        JOIN ip i ON i.id = iv.ipid
+        ORDER BY lastpost DESC, token
+    `;
+    const result = await pool.query(text, []);
+
+    const index = new Map<number, number>()
+    const ret:UserData[] = [];
+    for (let row of result.rows) {
+        const item:UserData = {
+            commentCount: row.count,
+            flaggedCount: row.flagged,
+            lastPost: row.lastpost,
+            visitorid: row.visitorid,
+            token: row.token,
+            ipAddress: row.address,
+            names: []
+        }
+
+        index.set(item.visitorid, ret.length);
+        ret.push(item);
+    }
+
+    const names = await getUserNames();
+    for (let namePair of names) {
+        const idx = index.get(namePair.visitorid);
+        if (idx == undefined) {continue}
+        const item = ret[idx];
+        item.names.push(namePair.name);
+    }
+
+    return ret;
+}
+
+export async function getUserNames(): Promise<{name: string, visitorid: number}[]> {
+    const text = `SELECT DISTINCT name, visitorid FROM (
+    	SELECT name, visitorid, posted FROM comment WHERE visitorid IS NOT null ORDER BY posted DESC, visitorid
+    )`
+
+    const result = await pool.query(text, []);
+    return result.rows;
+}
+ 
+export async function getActiveUsers(tokens:string[]): Promise<any[]> {
+    if (tokens.length == 0) { return []; }
+    let text = "SELECT * FROM visitor WHERE "
+    
+    for (let i = 0; i < tokens.length; i++) {
+        if (i > 0) {
+            text += " OR "
+        }
+
+        text += " token = $" + (i + 1);
+    }
+
+    try {
+        const result = await pool.query(text, tokens);
+        return result.rows;
+    } catch (e) {
+        console.log("get active users failed with " + JSON.stringify(e));
+    }
+
+    return [];
+}
+
+export async function getAlias(after: number = 0):Promise<any[]> {
+
+    const text = `SELECT id as visitorid, alias, updated FROM visitor WHERE updated > $1`;
+    try {
+        const result = await pool.query(text, [after]);
+        return result.rows;
+    } catch (e) {
+        console.log("get alias failed with " + JSON.stringify(e));
+    }
+
+    return [];
+}
+
+export async function updateAlias(visitorid: number, alias: string):Promise<number | null> {
+    const now = new Date().getTime();
+    const text = `UPDATE visitor SET alias = $1, updated = $2 WHERE id = $3`
+    try {
+        await pool.query(text, [alias, now, visitorid]);
+        return now;
+    } catch (e) {
+        console.log("set alias failed with " + JSON.stringify(e));
+    }
+
+    return null;
 }

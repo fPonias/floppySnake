@@ -10,7 +10,11 @@ import {
     getTopComments,
     getPost,
     createPost,
-    flagComment
+    flagComment,
+    getUserData,
+    getActiveUsers,
+    getAlias,
+    updateAlias
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -287,6 +291,47 @@ sectigo.com
             })
     })
 
+    app.post("/alias/:visitorid{/:token}", (req, res) => {
+        console.log("post alias called with " + JSON.stringify(req.body));
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed for delete action");
+            res.status(401).send();
+            return;
+        }
+
+        const json = req.body;
+        if (json.alias === undefined) {
+            console.log("post alias empty.");
+            res.status(500).send();
+            return;
+        }
+
+        updateAlias(req.params.visitorid, json.alias)
+            .then(response => {
+                res.status(200).send("success");
+
+                if (response != null) {
+                    MyWebSocket.instance.broadcastUpdateAlias(response, req.params.visitorid);
+                }
+            })
+            .catch(error => {
+                res.status(500).send(error);
+            })
+    });
+
+    app.get("/alias{/:after}", (req, res) => {
+        console.log("alias fetch called with" + JSON.stringify(req.params));
+        
+        getAlias(req.params.after ?? 0)
+            .then(response => {
+                res.status(200).send(response)
+            })
+            .catch(error => {
+                res.status(500).send(error);
+            })
+    })
+
     app.get('/post/:url', (req, res) => {
         console.log("get post called with " + JSON.stringify(req.params));
         const url = atob(req.params.url);
@@ -320,8 +365,15 @@ sectigo.com
             })
     })
 
-    app.get('/getAdmin/:key', (req, res) => {
+    app.get('/getAdmin/:key/:token', (req, res) => {
         console.log("getAdmin called with " + JSON.stringify(req.params));
+
+        if (!MyWebSocket.instance.isLoggedIn(req.params.token)) {
+            console.log("invalid user attempted to get admin token");
+            res.status(500).send("nope");
+            return;
+        }
+
         const key = req.params.key;
 
         const auth = authorize(key);
@@ -345,5 +397,46 @@ sectigo.com
         const auth = isAuthorized(key);
 
         res.status(200).send(auth ? "true" : "false");
+    });
+
+    app.get('/userData/:key', (req, res) => {
+        console.log("userData called with " + JSON.stringify(req.params));
+        const key = req.params.key;
+
+        if (!isAuthorized(key)) {
+            console.log("auth request rejected with " + key);
+            res.status(500).send("nope");
+            return;
+        }
+
+        getUserData()
+            .then(userData => {
+                res.status(200).send(JSON.stringify(userData));
+            })
+            .catch(error => {
+                console.log("get user data failed with " + JSON.stringify(error));
+                res.status(500).send(error);
+            });
+    })
+
+    app.get('/activeUsers/:key', (req, res) => {
+        console.log("active users called with " + JSON.stringify(req.params));
+        const key = req.params.key;
+
+        if (!isAuthorized(key)) {
+            console.log("auth request rejected with " + key);
+            res.status(500).send("nope");
+            return;
+        }
+
+        const tokens = MyWebSocket.instance.getActiveTokens();
+        getActiveUsers(tokens)
+            .then(userList => {
+                res.status(200).send(JSON.stringify(userList));
+            })
+            .catch(error => {
+                console.log("get user list failed with " + JSON.stringify(error));
+                res.status(500).send(error);
+            })
     })
 }

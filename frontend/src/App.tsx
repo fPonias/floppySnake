@@ -1,4 +1,4 @@
-import { createContext, JSX, useContext, useRef, useState } from 'react'
+import { createContext, JSX, useCallback, useContext, useRef, useState } from 'react'
 import './App.css'
 import useMount from './useMount';
 import { FormComponent } from './Form';
@@ -10,6 +10,9 @@ import { useCookies } from "react-cookie";
 import Comment from './Comment';
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
+import { AdminTools, UserData } from './AdminTools';
+import { AdminPanel } from './Admin';
+import VisitorEntries from './VisitorEntry';
 
 interface ActiveReplyData {
     name: string,
@@ -19,6 +22,8 @@ interface ActiveReplyData {
 
 export interface AppContextProps {
     commentBackend: CommentEntries | null,
+    adminBackend: AdminTools | null,
+    visitorBackend: VisitorEntries | null,
     apiToken: string | null,
     adminEnabled: boolean,
     expandedComments: Set<number>,
@@ -27,7 +32,9 @@ export interface AppContextProps {
 };
 
 export const AppContext = createContext<AppContextProps>({
-    commentBackend: null, 
+    commentBackend: null,
+    adminBackend: null,
+    visitorBackend: null,
     apiToken: null,
     adminEnabled: false,
     expandedComments: new Set(),
@@ -45,6 +52,7 @@ function App() {
 
     const [cookies, setCookie, removeCookie] = useCookies(["token", "name", "apiToken"]);
     const [triggerUpdate, setTriggerUpdate] = useState(0);
+    const [triggerAdminUpdate, setTriggerAdminUpdate] = useState(0);
     
     appContext.onPosted = function() {
         appContext.activeReply = null;
@@ -83,6 +91,11 @@ function App() {
             } else if (data.action == "token") {
                 setCookie("apiToken", data.token);
                 appContext.apiToken = data.token;
+
+                if (cookies.token) {
+                    const arg = JSON.stringify({ action: "adminTokenVerify", token: cookies.token });
+                    ws.current?.sendMessage(arg);
+                }
             } else if (data.action == "update") {
                 const id = data.postid;
                 const commentBack = appContext.commentBackend;
@@ -90,6 +103,31 @@ function App() {
                 if (!commentBack) { return;}
 
                 doUpdateOn(id);
+            } else if (data.action == "login") {
+                appContext.adminBackend?.runUpdate();
+            } else if (data.action == "logout") {
+                appContext.adminBackend?.runUpdate();
+            } else if (data.action == "isAdmin") {
+                if (!data.result) {
+                    removeCookie("token");
+                }
+
+                appContext.adminEnabled = data.result;
+                if (appContext.adminBackend) {
+                    appContext.adminBackend.adminToken = cookies.token;
+                    appContext.adminBackend.runUpdate();
+                }
+            } else if (data.action == "adminToken") {
+                appContext.adminEnabled = (data.result) ? true : false;
+                setCookie("token", data.result);
+                if (appContext.adminBackend) {
+                    appContext.adminBackend.adminToken = data.result;
+                    appContext.adminBackend.runUpdate();
+                }
+            } else if (data.action == "alias") {
+                if (appContext.visitorBackend) {
+                    appContext.visitorBackend.fetchNewest();
+                }
             }
         },
     });
@@ -101,11 +139,29 @@ function App() {
         return site + "/" + path;
     }
 
+    const visitorDataListener = useCallback(() => {
+        setTriggerUpdate(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
+    }, [triggerUpdate]);
+
+    const userDataListener = useCallback(() => {
+        setTriggerAdminUpdate(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
+    }, [triggerAdminUpdate]);
+
     useMount(() => {
         setLoading(true);
         const siteid = getSiteID();
         if (appContext.commentBackend == null || appContext.commentBackend.url != siteid) {
             appContext.commentBackend = new CommentEntries(siteid);
+        }
+
+        if (appContext.adminBackend == null) {
+            appContext.adminBackend = new AdminTools();
+            appContext.adminBackend.addUserDataListener(userDataListener);
+        }
+
+        if (appContext.visitorBackend == null) {
+            appContext.visitorBackend = new VisitorEntries();
+            appContext.visitorBackend.addVisitorDataListener(visitorDataListener);
         }
 
         let lastTime = new Date().getTime();
@@ -120,16 +176,6 @@ function App() {
 
         async function delayed() {
             if (!appContext.commentBackend) {return}
-
-            if (cookies.token) {
-                const verified = await appContext.commentBackend.verifyAdmin(cookies.token);
-
-                if (!verified) {
-                    removeCookie("token");
-                }
-
-                appContext.adminEnabled = verified;
-            }
 
             await firstLoad()
             setLoading(false)
@@ -165,6 +211,9 @@ function App() {
         await appContext.commentBackend?.getPost();
         await appContext.commentBackend?.getRecent();
         await appContext.commentBackend?.sortTree();
+
+        await appContext.visitorBackend?.fetchNewest();
+
         setComments(appContext.commentBackend?.tree ?? []);
     }
 
@@ -221,6 +270,7 @@ function App() {
             const hasActiveReply = appContext.activeReply?.id == comment.id
 
             const elem = (<Comment
+                key={comment.id} 
                 comment={comment}
                 onReply={(id) => {replyClicked(id)}}
                 onDelete={(id) => {deleteClicked(id)}}
@@ -241,21 +291,24 @@ function App() {
     }
 
     async function onAdminEnabled() {
-        if (!appContext.commentBackend) { return; }
+        if (!ws.current) { return; }
 
         const password = prompt('Password:')
-        const token = await appContext.commentBackend.requestAdmin(password ?? "");
-        
-        appContext.adminEnabled = (token != null);
-        setCookie("token", token);
+        const arg = JSON.stringify({ action: "adminTokenRequest", password: password });
+        await ws.current.sendMessage(arg);
     }
 
     if (loading) {
         return (<div>Loading ...</div>)
     }
 
+    const aliasData = appContext.visitorBackend?.entries ?? new Map()
+    const userData = appContext.adminBackend?.userData ?? []
 
     return (<div className='outer'>
+        <div style={{marginBottom: "20px"}}>
+            <AdminPanel userData={userData} aliasData={aliasData} key={triggerAdminUpdate} />
+        </div>
         <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
         <div className='comments'>
             {renderComments(0, comments)}

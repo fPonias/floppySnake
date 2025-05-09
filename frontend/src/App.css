@@ -53,8 +53,12 @@
 
 #minusOne .comment .name {
     font-weight: bold;
-    padding-right: 10px;
+    margin-right: 10px;
     color: black;
+}
+
+#minusOne .comment .censored {
+    background-color: black;
 }
 
 #minusOne .comment .time {
@@ -93,4 +97,36 @@
     position: absolute;
     left:50px;
     top: 0px;
+}
+
+#minusOne .nameList {
+    position: absolute;
+    z-index: 1;
+    background-color: white;
+    border: solid black 1px;
+    padding: 4px 10px;
+}
+
+#minusOne .adminPanel {
+    border: 1px solid;
+    border-collapse: collapse;
+    position: relative;
+}
+
+#minusOne .adminPanel tr {
+    border: 1px solid;
+}
+
+#minusOne .adminPanel td {
+    padding: 0px 10px;
+}
+
+#minusOne .adminPanel .aliasWrapper {
+    display: flex;
+}
+
+#minusOne .adminPanel .aliasButton {
+    width: 20px;
+    padding: 0px;
+    margin-left: 10px;
 }
