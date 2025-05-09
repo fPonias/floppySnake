@@ -272,14 +272,13 @@ interface UserData {
 }
 
 export async function getUserData(): Promise<UserData[]> {
-    const text = `SELECT c.count, f.flagged, p.lastpost, v.token, v.id as visitorid, i.address
+    const text = `SELECT DISTINCT c.count, f.flagged, p.lastpost, v.token, v.id as visitorid
 		FROM visitor v
         LEFT OUTER JOIN(SELECT COUNT(visitorid) count, visitorid FROM comment GROUP BY visitorid ORDER BY count DESC) c
 			ON (c.visitorid = v.id)
         LEFT OUTER JOIN(SELECT COUNT(id) flagged, visitorid FROM comment WHERE flagged = true GROUP BY visitorid) f ON(f.visitorid = c.visitorid)
         LEFT OUTER JOIN(SELECT MAX(posted) lastpost, visitorid FROM comment GROUP BY visitorid) p ON(p.visitorid = c.visitorid)
         JOIN ip_visitor iv ON iv.visitorid = v.id
-        JOIN ip i ON i.id = iv.ipid
         ORDER BY lastpost DESC, token
     `;
     const result = await pool.query(text, []);
@@ -293,7 +292,6 @@ export async function getUserData(): Promise<UserData[]> {
             lastPost: row.lastpost,
             visitorid: row.visitorid,
             token: row.token,
-            ipAddress: row.address,
             names: []
         }
 
@@ -313,9 +311,13 @@ export async function getUserData(): Promise<UserData[]> {
 }
 
 export async function getUserNames(): Promise<{name: string, visitorid: number}[]> {
-    const text = `SELECT DISTINCT name, visitorid FROM (
-    	SELECT name, visitorid, posted FROM comment WHERE visitorid IS NOT null ORDER BY posted DESC, visitorid
-    )`
+    const text = `
+    	SELECT name, MAX(visitorid) visitorid, MAX(posted) posted
+		FROM comment
+		WHERE visitorid IS NOT null AND name != ''
+		GROUP BY name
+		ORDER BY visitorid, posted DESC
+	`
 
     const result = await pool.query(text, []);
     return result.rows;

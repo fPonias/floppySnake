@@ -40,7 +40,7 @@ export const AdminPanel:React.FC<AdminProps> = ({
     
     const dt = new Date()
     dt.setHours(0, 0, 0, 0);
-    const today = 0;//dt.getTime() - (1000 * 60 * 60 * 24);
+    const today = dt.getTime() - (1000 * 60 * 60 * 24);
 
     function triggerAliasUpdate(id: number, alias: string) {
         const adminToken = appContext.adminBackend?.adminToken;
