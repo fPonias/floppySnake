@@ -91,9 +91,14 @@ function App() {
                 if (date > commentBack.newest) {
                     doUpdate();
                 }
+
+                if (appContext.adminEnabled) {
+                    appContext.adminBackend?.runUpdate();
+                }
             } else if (data.action == "token") {
                 setCookie("apiToken", data.token);
                 appContext.apiToken = data.token;
+                firstLoad();
 
                 if (cookies.token) {
                     const arg = JSON.stringify({ action: "adminTokenVerify", token: cookies.token });
@@ -106,6 +111,10 @@ function App() {
                 if (!commentBack) { return;}
 
                 doUpdateOn(id);
+
+                if (appContext.adminEnabled) {
+                    appContext.adminBackend?.runUpdate();
+                }
             } else if (data.action == "login") {
                 appContext.adminBackend?.runUpdate();
             } else if (data.action == "logout") {
@@ -199,14 +208,6 @@ function App() {
                 lastTime += 1000;
             }
         }, 250);
-
-        async function delayed() {
-            if (!appContext.commentBackend) {return}
-
-            await firstLoad()
-            setLoading(false)
-        }
-        delayed();
     });
 
     function replyClicked(id: number) {
@@ -246,6 +247,7 @@ function App() {
         await appContext.visitorBackend?.fetchNewest();
 
         setComments(appContext.commentBackend?.tree ?? []);
+        setLoading(false);
     }
 
     async function doUpdate() {

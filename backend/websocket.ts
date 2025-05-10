@@ -2,7 +2,7 @@ import env2 from '../env';
 import { WebSocketServer } from "ws";
 import { v4 } from "uuid";
 import url from "url";
-import { checkToken } from './database';
+import { checkToken, UserData } from './database';
 import { authorize, getGrants, isAuthorized } from './adminKey';
 
 const env = (env2.default) ? env2.default : env2;
@@ -152,6 +152,16 @@ export default class MyWebSocket {
 
             const message = JSON.stringify({ action: "adminToken", result: adminToken });
             connection.send(message);
+        }
+    }
+
+    markActiveUsers(userData:UserData[]) {
+        for (let data of userData) {
+            if (this.tokenIndex.has(data.token)) {
+                data.isActive = true;
+            } else {
+                data.isActive = false;
+            }
         }
     }
 
