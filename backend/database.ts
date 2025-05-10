@@ -239,7 +239,7 @@ export async function checkToken(token: string, ip:string) {
         let visitorid  = 0;
         if (result.rows.length == 0) {
             console.log("new visitor");
-            text = "INSERT INTO visitor (token, flagged) VALUES ($1, 0) RETURNING id";
+            text = "INSERT INTO visitor (token) VALUES ($1) RETURNING id";
             result = await pool.query(text, [token]);
             visitorid = result.rows[0].id;
         } else {
@@ -261,25 +261,25 @@ export async function checkToken(token: string, ip:string) {
     }
 }
 
-interface UserData {
+export interface UserData {
     commentCount: number,
     flaggedCount: number,
     lastPost: number,
     visitorid: number,
     token: string,
-    ipAddress: string,
-    names: string[]
+    alias: string,
+    ipAddresses: string[],
+    names: string[],
+    isActive: boolean,
 }
 
 export async function getUserData(): Promise<UserData[]> {
-    const text = `SELECT c.count, f.flagged, p.lastpost, v.token, v.id as visitorid, i.address
+    const text = `SELECT c.count, f.flagged, p.lastpost, v.token, v.id as visitorid, v.alias
 		FROM visitor v
         LEFT OUTER JOIN(SELECT COUNT(visitorid) count, visitorid FROM comment GROUP BY visitorid ORDER BY count DESC) c
 			ON (c.visitorid = v.id)
         LEFT OUTER JOIN(SELECT COUNT(id) flagged, visitorid FROM comment WHERE flagged = true GROUP BY visitorid) f ON(f.visitorid = c.visitorid)
         LEFT OUTER JOIN(SELECT MAX(posted) lastpost, visitorid FROM comment GROUP BY visitorid) p ON(p.visitorid = c.visitorid)
-        JOIN ip_visitor iv ON iv.visitorid = v.id
-        JOIN ip i ON i.id = iv.ipid
         ORDER BY lastpost DESC, token
     `;
     const result = await pool.query(text, []);
@@ -293,8 +293,10 @@ export async function getUserData(): Promise<UserData[]> {
             lastPost: row.lastpost,
             visitorid: row.visitorid,
             token: row.token,
-            ipAddress: row.address,
-            names: []
+            alias: row.alias,
+            ipAddresses: [],
+            names: [],
+            isActive: false
         }
 
         index.set(item.visitorid, ret.length);
@@ -309,38 +311,40 @@ export async function getUserData(): Promise<UserData[]> {
         item.names.push(namePair.name);
     }
 
+    const addresses = await getUserAddresses();
+    for (let addressObj of addresses) {
+        const idx = index.get(addressObj.id);
+        if (idx == undefined) { continue }
+
+        const item = ret[idx];
+        item.ipAddresses.push(addressObj.address);
+    }
+
     return ret;
 }
 
 export async function getUserNames(): Promise<{name: string, visitorid: number}[]> {
-    const text = `SELECT DISTINCT name, visitorid FROM (
-    	SELECT name, visitorid, posted FROM comment WHERE visitorid IS NOT null ORDER BY posted DESC, visitorid
-    )`
+    const text = `SELECT name, MAX(visitorid) visitorid, MAX(posted) posted
+			FROM comment 
+			WHERE visitorid IS NOT null AND name != ''
+			GROUP BY name
+			ORDER BY visitorid, posted DESC
+    `
 
     const result = await pool.query(text, []);
     return result.rows;
 }
- 
-export async function getActiveUsers(tokens:string[]): Promise<any[]> {
-    if (tokens.length == 0) { return []; }
-    let text = "SELECT * FROM visitor WHERE "
-    
-    for (let i = 0; i < tokens.length; i++) {
-        if (i > 0) {
-            text += " OR "
-        }
 
-        text += " token = $" + (i + 1);
-    }
+export async function getUserAddresses(): Promise<{ address: string, posted: number | null, firstvisited: number, id: number }[]> {
+    const text = `SELECT v.id, c.posted, i.firstvisited, i.address FROM visitor v
+            LEFT OUTER JOIN (SELECT MAX(posted) posted, visitorid FROM comment GROUP BY visitorid) c ON v.id = c.visitorid
+            JOIN ip_visitor iv ON iv.visitorid = v.id
+            JOIN ip i ON i.id = iv.ipid
+    		order by v.id, c.posted, i.firstvisited
+    `
 
-    try {
-        const result = await pool.query(text, tokens);
-        return result.rows;
-    } catch (e) {
-        console.log("get active users failed with " + JSON.stringify(e));
-    }
-
-    return [];
+    const result = await pool.query(text, []);
+    return result.rows;
 }
 
 export async function getAlias(after: number = 0):Promise<any[]> {

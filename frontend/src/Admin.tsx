@@ -18,25 +18,6 @@ export const AdminPanel:React.FC<AdminProps> = ({
     const [nameListOpen, setNameListOpen] = useState(false);
     const [nameListId, setNameListId] = useState(0);
     const [nameListOffset, setNameListOffset] = useState([0, 0])
-
-    useMount(() => {
-        document.body.addEventListener('click', () => {
-            callbackRef.current();
-        });
-    });
-    
-    const clickCallback = useCallback(() => {
-        setTimeout(() => {
-            const now = new Date().getTime();
-            if (now - clickHandled.current <= 10) { return; }
-            clickHandled.current = now;
-            if (nameListOpen) {
-                setNameListOpen(false);
-            }
-        }, 5);
-    }, [nameListOpen, nameListId]);
-    const callbackRef = useRef(clickCallback);
-    useEffect(() => {callbackRef.current = clickCallback}, [callbackRef, clickCallback]);
     
     const dt = new Date()
     dt.setHours(0, 0, 0, 0);
@@ -49,12 +30,8 @@ export const AdminPanel:React.FC<AdminProps> = ({
         appContext.visitorBackend?.updateAlias({id: id, alias: alias}, adminToken);
     }
 
-    function toggleNameList(event: React.MouseEvent, visitorid: number, isOpen: boolean) {
-        setNameListOpen(!isOpen);
-        if (isOpen) { return; }
-
-        setNameListId(visitorid);
-        setNameListOffset([event.pageX, event.pageY])
+    function closeNameList() { 
+        setNameListOpen(false);
     }
 
     function renderNameList(): JSX.Element {
@@ -66,27 +43,17 @@ export const AdminPanel:React.FC<AdminProps> = ({
 
         if (!data) { return (<></>) }
 
-
         return (
-            <div className="nameList"
-                style={{ left: nameListOffset[0], top: nameListOffset[1] }}
-                onClick={() => {
-                    setNameListOpen(false) 
-                }}
-            >
-                {data.names.map((name) => {
-                    return (<div>{name}</div>);
-                })}
-            </div>
+            <NameList nameListOffset={nameListOffset} userData={data} onClosed={closeNameList} />
         )
     }
 
-    const clickHandled = useRef(0);
     function onNameClicked(id: number, event: React.MouseEvent) {
-        const now = new Date().getTime();
-        if (now - clickHandled.current <= 10) { return; }
-        clickHandled.current = now;
-        toggleNameList(event, id, nameListOpen) 
+        if (nameListOpen) { return; }
+        setNameListOpen(true);
+
+        setNameListId(id);
+        setNameListOffset([event.pageX, event.pageY]);
     }
 
     function setAllowPosts(value: boolean) {
@@ -116,7 +83,7 @@ export const AdminPanel:React.FC<AdminProps> = ({
     })
     return (<div className="admin">
         <table className="adminPanel">
-            <thead><tr><th>id</th><th>name</th><th>posts</th><th>flagged</th><th>active</th><th>alias</th></tr></thead>
+            <thead><tr><th>id</th><th>name</th><th>posts</th><th>flagged</th><th>active</th></tr></thead>
             <tbody>
             {filtered.map((value, _) => {
                 const alias = aliasData.get(value.visitorid)
@@ -161,9 +128,46 @@ const AdminLine: React.FC<AdminLineProps> = ({
         <td>{userData.commentCount}</td>
         <td>{userData.flaggedCount ?? 0}</td>
         <td>{userData.isActive ? "X" : ""}</td>
-        <td className="aliasWrapper">
-            <input value={aliasLocal} onChange={(v) => { onAliasUpdatedLocal(v, userData.visitorid) }} />
-            <button className="aliasButton" onClick={(ev) => {triggerAliasUpdate(userData.visitorid, aliasLocal); ev.stopPropagation()}}>-&gt;</button>
-        </td>
     </tr>)
+}
+
+interface NameListProps {
+    userData: UserData,
+    nameListOffset: number[]
+    onClosed: () => void
+}
+
+export const NameList: React.FC<NameListProps> = ({
+    userData,
+    nameListOffset,
+    onClosed
+}: NameListProps) => {
+    const nameListOpened = useRef(0);
+
+    const clickCallback = useCallback(() => {
+        const now = new Date().getTime();
+        if (now - nameListOpened.current <= 100) { return; }
+        onClosed()
+    }, [nameListOpened]);
+    const callbackRef = useRef(clickCallback);
+    useEffect(() => { callbackRef.current = clickCallback }, [callbackRef, clickCallback]);
+
+    useEffect(() => {
+        nameListOpened.current = new Date().getTime();
+        document.body.addEventListener('click', callbackRef.current);
+
+        return () => {
+            document.body.removeEventListener('click', callbackRef.current)
+        }
+    });
+
+    return (
+        <div className="nameList"
+            style={{ left: nameListOffset[0], top: nameListOffset[1] }}
+        >
+            {userData.names.map((name) => {
+                return (<div>{name}</div>);
+            })}
+        </div>
+    )
 }

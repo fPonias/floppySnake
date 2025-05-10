@@ -6,6 +6,7 @@ import { AppContext } from "./App";
 import EventEmitter from "reactjs-eventemitter";
 import { findHyperlinks } from "./CommentUtil"; 
 import env from "../../env"
+import { NameList } from "./Admin";
 
 interface CommentProps {
     comment: CommentEntry,
@@ -127,6 +128,38 @@ const Comment:React.FC<CommentProps> = ({
         updateTime();
     }, [localComment]);
 
+    const [nameListOpen, setNameListOpen] = useState(false);
+    const [nameListId, setNameListId] = useState(0);
+    const [nameListOffset, setNameListOffset] = useState([0, 0])
+
+    function closeNameList() {
+        setNameListOpen(false);
+    }
+
+    function renderNameList(): JSX.Element {
+        if (!appContext.adminEnabled || !appContext.adminBackend) { return (<></>)}
+        if (!nameListOpen || !nameListId) { return (<></>) }
+
+        const data = appContext.adminBackend.userData.find((data) => {
+            return data.visitorid == nameListId;
+        })
+
+        if (!data) { return (<></>) }
+
+        return (
+            <NameList nameListOffset={nameListOffset} userData={data} onClosed={closeNameList} />
+        )
+    }
+
+    function onNameClicked(id: number, event: React.MouseEvent) {
+        if (nameListOpen) { return; }
+        setNameListOpen(true);
+
+        setNameListId(id);
+        setNameListOffset([event.pageX, event.pageY]);
+    }
+
+
     function renderFlaggedContent(isFlagged:Boolean):JSX.Element {
         if (!isFlagged) { return (<></>)}
         const image = lyingImages[lyingIndex];
@@ -207,7 +240,7 @@ const Comment:React.FC<CommentProps> = ({
     return (<>
         <div className='comment' key={"comment-" + localComment.id} id={localComment.id.toString()} style={{ marginLeft: indent + "px" }}>
             <div className="commentLeft" style={(localComment.flagged) ? {minHeight: 160} : {}}>
-                <div className='header'>
+                <div className='header' onClick={(ev) => {onNameClicked(localComment.visitorid, ev)}}>
                     <span className={nameClass}>{name}</span>
                     {(alias) ? (<span className='name'>{alias}</span>) : (<></>)}
                     <span className='time'>{time}</span>
@@ -226,6 +259,7 @@ const Comment:React.FC<CommentProps> = ({
             {renderReply()}
             
         </div>
+        {renderNameList()}
     </>)
 }
 

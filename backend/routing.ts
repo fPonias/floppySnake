@@ -12,7 +12,6 @@ import {
     createPost,
     flagComment,
     getUserData,
-    getActiveUsers,
     getAlias,
     updateAlias
 } from './database';
@@ -416,33 +415,13 @@ sectigo.com
 
         getUserData()
             .then(userData => {
+                MyWebSocket.instance.markActiveUsers(userData);
                 res.status(200).send(JSON.stringify(userData));
             })
             .catch(error => {
                 console.log("get user data failed with " + JSON.stringify(error));
                 res.status(500).send(error);
             });
-    })
-
-    app.get('/activeUsers/:key', (req, res) => {
-        console.log("active users called with " + JSON.stringify(req.params));
-        const key = req.params.key;
-
-        if (!isAuthorized(key)) {
-            console.log("auth request rejected with " + key);
-            res.status(500).send("nope");
-            return;
-        }
-
-        const tokens = MyWebSocket.instance.getActiveTokens();
-        getActiveUsers(tokens)
-            .then(userList => {
-                res.status(200).send(JSON.stringify(userList));
-            })
-            .catch(error => {
-                console.log("get user list failed with " + JSON.stringify(error));
-                res.status(500).send(error);
-            })
     })
 
     app.get("/allowPosts", (req, res) => {
