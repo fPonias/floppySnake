@@ -1,17 +1,15 @@
 import React, { JSX, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppContext } from "./App";
 import { UserData } from "./AdminTools";
-import { VisitorEntry } from "./VisitorEntry";
-import useMount from "./useMount";
 
 interface AdminProps {
     userData: UserData[],
-    aliasData: Map<number, VisitorEntry>
+    //aliasData: Map<number, VisitorEntry>
 }
 
 export const AdminPanel:React.FC<AdminProps> = ({
     userData,
-    aliasData,
+    //aliasData,
 }:AdminProps) => {
     const appContext = useContext(AppContext);
 
@@ -22,14 +20,14 @@ export const AdminPanel:React.FC<AdminProps> = ({
     const dt = new Date()
     dt.setHours(0, 0, 0, 0);
     const today = dt.getTime() - (1000 * 60 * 60 * 24);
-
+/*
     function triggerAliasUpdate(id: number, alias: string) {
         const adminToken = appContext.adminBackend?.adminToken;
         if (!adminToken) { return; }
 
         appContext.visitorBackend?.updateAlias({id: id, alias: alias}, adminToken);
     }
-
+*/
     function closeNameList() { 
         setNameListOpen(false);
     }
@@ -86,9 +84,9 @@ export const AdminPanel:React.FC<AdminProps> = ({
             <thead><tr><th>id</th><th>name</th><th>posts</th><th>flagged</th><th>active</th></tr></thead>
             <tbody>
             {filtered.map((value, _) => {
-                const alias = aliasData.get(value.visitorid)
+                //const alias = aliasData.get(value.visitorid)
                 return (
-                    <AdminLine userData={value} aliasData={alias} triggerAliasUpdate={triggerAliasUpdate} onNameClicked={onNameClicked}/>
+                    <AdminLine userData={value} onNameClicked={onNameClicked}/>
                 );
             })}
             </tbody>
@@ -100,18 +98,18 @@ export const AdminPanel:React.FC<AdminProps> = ({
 
 interface AdminLineProps {
     userData: UserData,
-    aliasData: VisitorEntry | undefined,
-    triggerAliasUpdate: (id: number, alias: string) => void
+    //aliasData: VisitorEntry | undefined,
+    //triggerAliasUpdate: (id: number, alias: string) => void
     onNameClicked: (id: number, event: React.MouseEvent) => void
 }
 
 const AdminLine: React.FC<AdminLineProps> = ({
     userData,
-    aliasData,
-    triggerAliasUpdate,
+    //aliasData,
+    //triggerAliasUpdate,
     onNameClicked,
 }: AdminLineProps) => {
-
+/*
     const [aliasLocal, setAliasLocal] = useState(aliasData?.alias ?? "");
 
     
@@ -119,7 +117,7 @@ const AdminLine: React.FC<AdminLineProps> = ({
         const value = evt.target.value;
         setAliasLocal(value);
     }
-
+*/
     return (<tr>
         <td>{userData.visitorid}</td>
         <td

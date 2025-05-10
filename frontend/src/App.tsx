@@ -338,12 +338,12 @@ function App() {
         return (<div>Loading ...</div>)
     }
 
-    const aliasData = appContext.visitorBackend?.entries ?? new Map()
+    //const aliasData = appContext.visitorBackend?.entries ?? new Map()
     const userData = appContext.adminBackend?.userData ?? []
 
     return (<div className='outer'>
         <div style={{marginBottom: "20px"}}>
-            <AdminPanel userData={userData} aliasData={aliasData} key={triggerAdminUpdate} />
+            <AdminPanel userData={userData} key={triggerAdminUpdate} />
         </div>
         <FormComponent onAdminEnabled={(_) => onAdminEnabled()} key={triggerUpdate}/>
         <div className='comments'>
