@@ -1,6 +1,7 @@
 import env from "../../env"
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
+import { Stickers } from "./Sticker";
 
 export default class CommentEntry {
     id: number
@@ -12,6 +13,7 @@ export default class CommentEntry {
     flagged: boolean
     name: string | null
     visitorid: number
+    stickerIndex: number | null
 
     constructor(row:any) {
         this.id = row.id;
@@ -24,6 +26,9 @@ export default class CommentEntry {
         this.visitorid = row.visitorid;
 
         this.children = [];
+
+        const count = Stickers.length;
+        this.stickerIndex = Math.floor(Math.random() * count);
     };
 
     update(target: CommentEntry) {
