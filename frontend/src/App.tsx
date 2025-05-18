@@ -128,6 +128,7 @@ function App() {
                 if (appContext.adminBackend) {
                     appContext.adminBackend.adminToken = cookies.token;
                     appContext.adminBackend.runUpdate();
+                    appContext.adminBackend.runUpdateFilters();
                 }
             } else if (data.action == "adminToken") {
                 appContext.adminEnabled = (data.result) ? true : false;
@@ -135,6 +136,7 @@ function App() {
                 if (appContext.adminBackend) {
                     appContext.adminBackend.adminToken = data.result;
                     appContext.adminBackend.runUpdate();
+                    appContext.adminBackend.runUpdateFilters();
                 }
             } else if (data.action == "alias") {
                 if (appContext.visitorBackend) {
@@ -144,6 +146,10 @@ function App() {
                 appContext.allowPosts = data.allowPosts;
                 setTriggerUpdate(triggerUpdate + 1);
                 setTriggerAdminUpdate(triggerAdminUpdate + 1);
+            } else if (data.action == "filtersUpdated") {
+                if (appContext.adminBackend && appContext.adminEnabled) {
+                    appContext.adminBackend.runUpdateFilters();
+                }
             }
         },
     });

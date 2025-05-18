@@ -372,3 +372,72 @@ export async function updateAlias(visitorid: number, alias: string):Promise<numb
 
     return null;
 }
+
+export async function getUrlWhitelist():Promise<string[]> {
+    const ret:string[] = [];
+    
+    try {
+        const text = `SELECT pattern FROM url_whitelist`
+        const result = await pool.query(text, []);
+
+        for (let line of result.rows) {
+            ret.push(line.pattern);
+        }
+
+        return ret;
+    } catch (e) {
+        console.log("fetch url whitelist failed" + JSON.stringify(e));
+    }
+
+    return ret;
+}
+
+interface Filter {
+    id?: number,
+    pattern: string,
+    replace: string
+}
+
+export async function getFilterList():Promise<Filter[]> {
+    const ret:Filter[] = [];
+
+    try {
+        const text = `SELECT id, pattern, replace FROM filter ORDER BY pattern`
+        const result = await pool.query(text, []);
+
+        for (let line of result.rows) {
+            ret.push({id: line.id, pattern: line.pattern, replace: line.replace});
+        }
+    } catch (e) {
+        console.log("fetch filter blacklist failed " + JSON.stringify(e));
+    }
+
+    return ret;
+}
+
+export async function addFilter(args: Filter) {
+    try {
+        const text = `INSERT INTO filter (pattern, replace) VALUES ($1, $2)`;
+        await pool.query(text, [args.pattern, args.replace]);
+    } catch (e) {
+        console.log("failed to insert filter " + JSON.stringify(e));
+    }
+}
+
+export async function updateFilter(args: Filter) {
+    try {
+        const text = `UPDATE filter SET pattern = $1, replace = $2 WHERE id=$3`;
+        await pool.query(text, [args.pattern, args.replace, args.id]);
+    } catch (e) {
+        console.log("failed to update filter " + JSON.stringify(e));
+    }
+}
+
+export async function deleteFilter(arg: number) {
+    try {
+        const text = `DELETE FROM filter WHERE id=$1`;
+        await pool.query(text, [arg]);
+    } catch (e) {
+        console.log("failed to delete filter " + JSON.stringify(e));
+    }
+}

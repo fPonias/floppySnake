@@ -93,6 +93,11 @@ export default class MyWebSocket {
         this.sendBroadcast(message);
     }
 
+    broadcastFiltersUpdated() {
+        const message = JSON.stringify({action: "filtersUpdated"});
+        this.sendAdminBroadcast(message);
+    }
+
     sendBroadcast(message:string) {
         const keys = this.connections.keys();
         for (let id of keys) {

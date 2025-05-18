@@ -139,3 +139,36 @@
     padding: 0px;
     margin-left: 10px;
 }
+
+
+#minusOne .adminTabs .tabs .tab {
+    padding: 6px 12px;
+    background: lightgrey;
+    border: solid 1px black;
+    border-bottom: 2px;
+    display: inline;
+}
+
+#minusOne .adminTabs .tabs .selected {
+    border-bottom: solid 2px transparent;
+    background: white;
+}
+
+
+#minusOne .adminTabs .pages .page {
+    display: none;
+    margin-top: 2px;
+}
+
+#minusOne .adminTabs .pages .selected {
+    display: block;
+}
+
+#minusOne .filterList .filter {
+    border: 1px solid grey;
+}
+
+#minusOne .filterList .filter div {
+    display: inline;
+    width: 50px;
+}

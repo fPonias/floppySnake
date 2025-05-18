@@ -13,7 +13,11 @@ import {
     flagComment,
     getUserData,
     getAlias,
-    updateAlias
+    updateAlias,
+    getFilterList,
+    addFilter,
+    updateFilter,
+    deleteFilter
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -448,5 +452,73 @@ sectigo.com
 
         res.status(200).send(allowPosts ? "true" : "false");
         MyWebSocket.instance.broadcastAllowPosts(allowPosts);
+    })
+
+    app.get("/filter{/:token}", (req, res) => {
+        console.log("get filters called");
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        getFilterList().then(ret => {
+            res.status(200).send(ret);
+        }).catch(err => {
+            console.log("get filters failed with " + err);
+            res.status(500).send("nope");
+            return;
+        });
+    });
+
+    app.post("/filter{/:token}", (req, res) => {
+        console.log("update filters called");
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        const json = req.body;
+        if (json.id === undefined) {
+            addFilter(json).then(() => {
+                res.status(200).send("success");
+            }).catch(err => {
+                console.log("add filter failed with " + err);
+                res.status(500).send("nope");
+                return;
+            })
+        } else {
+            updateFilter(json).then(() => {
+                res.status(200).send("success");
+            }).catch(err => {
+                console.log("update filter failed with " + err);
+                res.status(500).send("nope");
+                return;
+            })
+        }
+
+        MyWebSocket.instance.broadcastFiltersUpdated();
+    });
+
+    app.delete("/filter/:id{/:token}", (req, res) => {
+        console.log("delete filter called");
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        deleteFilter(req.params.id).then(() => {
+            res.status(200).send("success");
+        }).catch(err => {
+            console.log("delete filter failed with" + err);
+            res.status(500).send("nope");
+            return
+        })
+
+        MyWebSocket.instance.broadcastFiltersUpdated();
     })
 }

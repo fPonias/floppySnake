@@ -6,7 +6,7 @@ import { AppContext } from "./App";
 import EventEmitter from "reactjs-eventemitter";
 import { findHyperlinks } from "./CommentUtil"; 
 import env from "../../env"
-import { NameList } from "./Admin";
+import { NameList } from "./AdminMain";
 
 interface CommentProps {
     comment: CommentEntry,
