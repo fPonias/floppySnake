@@ -1,7 +1,7 @@
 import env from "../../env"
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
-import { getStickerIndex, Stickers } from "./Sticker";
+import { getStickerIndex } from "./Sticker";
 
 export default class CommentEntry {
     id: number
