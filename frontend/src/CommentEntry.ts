@@ -1,7 +1,7 @@
 import env from "../../env"
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
-import { Stickers } from "./Sticker";
+import { getStickerIndex, Stickers } from "./Sticker";
 
 export default class CommentEntry {
     id: number
@@ -27,8 +27,7 @@ export default class CommentEntry {
 
         this.children = [];
 
-        const count = Stickers.length;
-        this.stickerIndex = Math.floor(Math.random() * count);
+        this.stickerIndex = getStickerIndex();
     };
 
     update(target: CommentEntry) {
