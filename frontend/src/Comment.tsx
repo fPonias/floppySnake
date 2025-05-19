@@ -4,9 +4,9 @@ import { FormComponent } from "./Form";
 import { AppContext } from "./App";
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
-import { findHyperlinks } from "./CommentUtil"; 
-import env from "../../env"
+import { findHyperlinks } from "./CommentUtil";
 import { NameList } from "./AdminMain";
+import { Stickers } from "./Sticker";
 
 interface CommentProps {
     comment: CommentEntry,
@@ -18,15 +18,6 @@ interface CommentProps {
     onExpanded?: (id: number, expanded: boolean) => void,
     indent?: number,
 }
-
-const lyingPrefix = env.api + "/img/";
-const lyingImages = [
-    lyingPrefix + "lying01.jpg",
-    lyingPrefix + "lying02.jpg",
-    lyingPrefix + "lying03.jpg",
-    lyingPrefix + "lying04.jpg",
-    lyingPrefix + "lying05.jpg",
-];
 
 const Comment:React.FC<CommentProps> = ({
     comment,
@@ -73,7 +64,6 @@ const Comment:React.FC<CommentProps> = ({
     const appContext = useContext(AppContext);
     const [localComment, setComment] = useState(comment);
     const [time, setTime] = useState("");
-    const [lyingIndex, _setLyingIndex] = useState(Math.floor(Math.random() * lyingImages.length));
 
     function renderReply() {
         if (hasActiveReply) {
@@ -161,8 +151,8 @@ const Comment:React.FC<CommentProps> = ({
 
 
     function renderFlaggedContent(isFlagged:Boolean):JSX.Element {
-        if (!isFlagged) { return (<></>)}
-        const image = lyingImages[lyingIndex];
+        if (!isFlagged || comment.stickerIndex == null) { return (<></>)}
+        const image = Stickers[comment.stickerIndex];
         return (<img src={image} className="flaggedImage"/>)
     }
 
