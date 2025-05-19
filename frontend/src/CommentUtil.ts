@@ -2,6 +2,7 @@ const webWhitelist = [
     "youtu.be/",
     "www.youtube.com/",
     "youtube.com/",
+    "m.youtube.com/",
     "x.com/",
     "thehill.com/",
     "nypost.com/",

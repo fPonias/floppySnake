@@ -158,6 +158,8 @@
 #minusOne .adminTabs .pages .page {
     display: none;
     margin-top: 2px;
+    border: solid 1px;
+    padding: 6px;
 }
 
 #minusOne .adminTabs .pages .selected {
@@ -168,7 +170,6 @@
     border: 1px solid grey;
 }
 
-#minusOne .filterList .filter div {
-    display: inline;
-    width: 50px;
+#minusOne .filterList .filter button {
+    padding: 6px 10px;
 }

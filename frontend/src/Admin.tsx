@@ -10,16 +10,14 @@ interface Tab {
 }
 
 interface AdminProps {
-    userData:UserData[]
 }
 
 export const AdminPanel:React.FC<AdminProps> = ({
-    userData,
 }:AdminProps) => {
     const [selected, setSelected] = useState(0);
 
     const tabs = useRef<Tab[]>([
-        { name: "Admin", content: () => {return (<AdminMain userData={userData} />)}},
+        { name: "Admin", content: () => {return (<AdminMain  />)}},
         { name: "Filters", content: () => {return (<AdminFilters />)}}
     ]);
 

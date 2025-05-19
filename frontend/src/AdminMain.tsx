@@ -1,21 +1,24 @@
 import React, { JSX, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { AppContext } from "./App";
+import { AppContext, AppUpdateContext } from "./App";
 import { UserData } from "./AdminTools";
 
 interface AdminMainProps {
-    userData: UserData[],
-    //aliasData: Map<number, VisitorEntry>
 }
 
 export const AdminMain:React.FC<AdminMainProps> = ({
-    userData
 }:AdminMainProps) => {
     const appContext = useContext(AppContext);
+    const appUpdateContext = useContext(AppUpdateContext);
 
     const [nameListOpen, setNameListOpen] = useState(false);
     const [nameListId, setNameListId] = useState(0);
     const [nameListOffset, setNameListOffset] = useState([0, 0])
+    const [userData, setUserData] = useState<UserData[]>([]);
 
+    useEffect(() => {
+        setUserData(appContext.adminBackend?.userData ?? []);
+    }, [appUpdateContext.triggerAdminUpdate])
+;
     const dt = new Date()
     dt.setHours(0, 0, 0, 0);
     const today = dt.getTime() - (1000 * 60 * 60 * 24);

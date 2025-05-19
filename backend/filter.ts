@@ -1,3 +1,5 @@
+import { getFilterList } from "./database";
+
 const blackList = new Map<string, string[]>([
     ["kyle", ["Stan", "Kenny", "Cartman"]],
     ["lingworth", ["[redacted]"]],
@@ -12,9 +14,22 @@ const blackList = new Map<string, string[]>([
     ["greenbean", ["PN is a goddess", "I have 50TB of kiddie porn on my computer.", "I have a micropenis", "I'm a failed realtor", "I drive a cybertruck", "I'm a narcissitic stalker"]]
 ]);
 
+async function getSortedFilterList(): Promise<Map<string, string[]>> {
+    const list = await getFilterList();
+    const ret = new Map<string, string[]>();
 
-export function filterString(input:string):string {
-    //console.log("filtering string " + input);
+    for (let line of list) {
+        const replacements = ret.get(line.pattern) ?? [];
+        replacements.push(line.replace);
+        ret.set(line.pattern, replacements);
+    }
+
+    return ret;
+}
+
+export async function filterString(input:string):Promise<string> {
+    const blackList = await getSortedFilterList();
+    
     const stripped:string[] = []
     const index:number[] = []
     

@@ -15,7 +15,7 @@ export interface UserData {
 export interface Filter {
     id?: number,
     pattern: string,
-    replacement: string
+    replace: string
 }
 
 export interface User {
@@ -113,9 +113,6 @@ export class AdminTools {
 
         try {
             let url = env.api + "/filter/"
-            if (filter.id) {
-                url += filter.id + "/";
-            }
             url += this.adminToken;
 
             const body = JSON.stringify(filter);

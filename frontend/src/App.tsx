@@ -10,7 +10,7 @@ import { useCookies } from "react-cookie";
 import Comment from './Comment';
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
-import { AdminTools } from './AdminTools';
+import { AdminTools, UserData } from './AdminTools';
 import { AdminPanel } from './Admin';
 import VisitorEntries from './VisitorEntry';
 
@@ -41,24 +41,45 @@ export const AppContext = createContext<AppContextProps>({
     allowPosts: false,
     expandedComments: new Set(),
     activeReply: null,
-    onPosted: () => {}
+    onPosted: () => {},
 });
+
+export interface AppUpdateContextProps {
+    triggerAdminUpdate: number,
+    triggerUpdate: number,
+}
+
+export const AppUpdateContext = createContext<AppUpdateContextProps>({
+    triggerAdminUpdate: 0,
+    triggerUpdate: 0
+})
 
 function App() {
     const [comments, setComments] = useState<CommentEntry[]>([]);
     
     const [loading, setLoading] = useState(false);
     const appContext = useContext(AppContext);
+    const updateContext = useContext(AppUpdateContext);
 
     const ws = useRef<WebSocketHook | undefined>(undefined);
 
     const [cookies, setCookie, removeCookie] = useCookies(["token", "name", "apiToken"]);
-    const [triggerUpdate, setTriggerUpdate] = useState(0);
-    const [triggerAdminUpdate, setTriggerAdminUpdate] = useState(0);
-    
+
+    const setTriggerUpdate = useCallback(() => {
+        updateContext.triggerUpdate = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        setForceUpdate(updateContext.triggerUpdate);
+    }, [updateContext.triggerUpdate]);
+
+    const setTriggerAdminUpdate = useCallback(() => {
+        updateContext.triggerAdminUpdate = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        setForceUpdate(updateContext.triggerAdminUpdate);
+    }, [updateContext.triggerAdminUpdate]);
+
+    const [forceUpdate, setForceUpdate] = useState(updateContext.triggerAdminUpdate)
+
     appContext.onPosted = function() {
         appContext.activeReply = null;
-        setTriggerUpdate(triggerUpdate + 1);
+        setTriggerUpdate();
     }
 
     const [socketUrl, setSocketUrl] = useState<string | null>(null);
@@ -89,11 +110,11 @@ function App() {
                 if (!commentBack) { return; }
 
                 if (date > commentBack.newest) {
-                    doUpdate();
-                }
-
-                if (appContext.adminEnabled) {
-                    appContext.adminBackend?.runUpdate();
+                    doUpdate().then(() => {
+                        if (appContext.adminEnabled) {
+                            appContext.adminBackend?.runUpdate();
+                        }
+                    })
                 }
             } else if (data.action == "token") {
                 setCookie("apiToken", data.token);
@@ -110,11 +131,7 @@ function App() {
 
                 if (!commentBack) { return;}
 
-                doUpdateOn(id);
-
-                if (appContext.adminEnabled) {
-                    appContext.adminBackend?.runUpdate();
-                }
+                doUpdateOn(id).then(() => {appContext.adminBackend?.runUpdate() });
             } else if (data.action == "login") {
                 appContext.adminBackend?.runUpdate();
             } else if (data.action == "logout") {
@@ -127,28 +144,38 @@ function App() {
                 appContext.adminEnabled = data.result;
                 if (appContext.adminBackend) {
                     appContext.adminBackend.adminToken = cookies.token;
-                    appContext.adminBackend.runUpdate();
-                    appContext.adminBackend.runUpdateFilters();
+                    appContext.adminBackend.runUpdate().then(() => {
+                        appContext.adminBackend?.runUpdateFilters().then(
+                            () => { setTriggerAdminUpdate(); }
+                        )
+                    });
                 }
             } else if (data.action == "adminToken") {
                 appContext.adminEnabled = (data.result) ? true : false;
                 setCookie("token", data.result);
                 if (appContext.adminBackend) {
                     appContext.adminBackend.adminToken = data.result;
-                    appContext.adminBackend.runUpdate();
-                    appContext.adminBackend.runUpdateFilters();
+                    appContext.adminBackend.runUpdate().then(() => {
+                        appContext.adminBackend?.runUpdateFilters().then(
+                            () => { setTriggerAdminUpdate(); }
+                        )
+                    });
                 }
             } else if (data.action == "alias") {
                 if (appContext.visitorBackend) {
-                    appContext.visitorBackend.fetchNewest();
+                    appContext.visitorBackend.fetchNewest().then(
+                        () => { setTriggerAdminUpdate(); }
+                    );
                 }
             } else if (data.action == "allowPosts") {
                 appContext.allowPosts = data.allowPosts;
-                setTriggerUpdate(triggerUpdate + 1);
-                setTriggerAdminUpdate(triggerAdminUpdate + 1);
+                setTriggerUpdate();
+                setTriggerAdminUpdate();
             } else if (data.action == "filtersUpdated") {
                 if (appContext.adminBackend && appContext.adminEnabled) {
-                    appContext.adminBackend.runUpdateFilters();
+                    appContext.adminBackend.runUpdateFilters().then(
+                        () => { setTriggerAdminUpdate(); }
+                    )
                 }
             }
         },
@@ -161,13 +188,13 @@ function App() {
         return site + "/" + path;
     }
 
-    const visitorDataListener = useCallback(() => {
-        setTriggerUpdate(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
-    }, [triggerUpdate]);
+    const visitorDataListener = () => {
+        setTriggerUpdate();
+    }
 
-    const userDataListener = useCallback(() => {
-        setTriggerAdminUpdate(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
-    }, [triggerAdminUpdate]);
+    const userDataListener = () => {
+        setTriggerAdminUpdate();
+    }
 
     useEffect(() => {
         document.addEventListener("visibilitychange", visChngF);
@@ -227,7 +254,7 @@ function App() {
             }
         }
 
-        setTriggerUpdate(triggerUpdate + 1);
+        setTriggerUpdate();
     }
 
     async function deleteClicked(id:number) {
@@ -292,7 +319,7 @@ function App() {
             appContext.expandedComments.delete(id);
         }
 
-        setTriggerUpdate(triggerUpdate + 1);
+        setTriggerUpdate();
     }
 
     function onCommentFlagged(id: number) {
@@ -345,13 +372,20 @@ function App() {
     }
 
     //const aliasData = appContext.visitorBackend?.entries ?? new Map()
-    const userData = appContext.adminBackend?.userData ?? []
+
+    function renderAdminPanel() {
+        if (!appContext.adminEnabled) { return (<></>); }
+
+        return (
+            <div style={{ marginBottom: "20px" }}>
+                <AdminPanel/>
+            </div>
+        )
+    }
 
     return (<div className='outer'>
-        <div style={{marginBottom: "20px"}}>
-            <AdminPanel userData={userData} key={triggerAdminUpdate} />
-        </div>
-        <FormComponent onAdminEnabled={(_) => onAdminEnabled()} key={triggerUpdate}/>
+        {renderAdminPanel()}
+        <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
         <div className='comments'>
             {renderComments(0, comments)}
             {renderLoadMore()}

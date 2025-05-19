@@ -252,25 +252,27 @@ sectigo.com
         const now = new Date().getTime();
         const token = json.token
 
-        name = filterString(name);
-        const comment = filterString(original);
-        if (original == comment) {
-            original = "";
-        } else {
-            console.log("comment " + original + " filtered to " + comment);
-        }
+        filterString(name).then((name) => {
+            filterString(original).then((comment) => {
+                if (original == comment) {
+                    original = "";
+                } else {
+                    console.log("comment " + original + " filtered to " + comment);
+                }
 
-        createComment(token, comment, name, postid, parent, original)
-            .then(response => {
-                console.log("post comment successful");
-                res.status(200).send(response);
+                createComment(token, comment, name, postid, parent, original)
+                    .then(response => {
+                        console.log("post comment successful");
+                        res.status(200).send(response);
 
-                MyWebSocket.instance.broadcastNewPost(postid, now);
+                        MyWebSocket.instance.broadcastNewPost(postid, now);
+                    })
+                    .catch(error => {
+                        console.log("post comment failed with " + JSON.stringify(error));
+                        res.status(500).send(error);
+                    })
             })
-            .catch(error => {
-                console.log("post comment failed with " + JSON.stringify(error));
-                res.status(500).send(error);
-            })
+        })
     })
 
     app.delete('/comment/:id{/:token}', (req, res) => {
