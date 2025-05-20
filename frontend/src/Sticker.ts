@@ -8,7 +8,14 @@ export const Stickers = [
     prefix + "actionFigure.jpg"
 ];
 
+let current = -1;
+
 export function getStickerIndex():number {
     const count = Stickers.length;
-    return Math.floor(Math.random() * count);
+    current += 1;
+    if (current == count) {
+        current = 0;
+    }
+
+    return current;
 }
