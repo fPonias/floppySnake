@@ -4,8 +4,8 @@ import env from "../../env"
 const prefix = env.api + "/img/";
 export const Stickers = [
     prefix + "arse.jpg",
-    prefix + "lying01.jpg",
-    prefix + "lying04.jpg",
+    prefix + "snek.jpg",
+    prefix + "actionFigure.jpg"
 ];
 
 export function getStickerIndex():number {
