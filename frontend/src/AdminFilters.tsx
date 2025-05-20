@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { AppContext, AppUpdateContext } from "./App";
 import { Filter } from "./AdminTools";
 import useMount from "./useMount";
