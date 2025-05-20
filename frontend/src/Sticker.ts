@@ -3,7 +3,7 @@ import env from "../../env"
 
 const prefix = env.api + "/img/";
 export const Stickers = [
-    prefix + "arse.jpg",
+    prefix + "chickenLegs.jpg",
     prefix + "snek.jpg",
     prefix + "actionFigure.jpg"
 ];
