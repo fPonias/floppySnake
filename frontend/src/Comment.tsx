@@ -1,4 +1,4 @@
-import React, { JSX, useContext, useEffect, useState } from "react";
+import React, { JSX, useCallback, useContext, useEffect, useState } from "react";
 import CommentEntry from "./CommentEntry";
 import { FormComponent } from "./Form";
 import { AppContext } from "./App";
@@ -7,7 +7,6 @@ import EventEmitter from "reactjs-eventemitter";
 import { findHyperlinks } from "./CommentUtil";
 import { NameList } from "./AdminMain";
 import { getStickerIndex, Stickers } from "./Sticker";
-import useMount from "./useMount";
 
 interface CommentProps {
     comment: CommentEntry,
@@ -67,17 +66,21 @@ const Comment:React.FC<CommentProps> = ({
     const [time, setTime] = useState("");
     const [stickerIndex, setStickerIndex] = useState<number>(0);
 
-    useEffect(() => {
+    const updateSticker = useCallback((comment:CommentEntry) => {
         if (comment.flagged) {
             if (!appContext.stickerIndex.has(comment.id)) {
                 const sz = appContext.stickerIndex.size;
                 appContext.stickerIndex.set(comment.id, sz);
             }
 
-            setStickerIndex(appContext.stickerIndex.get(comment.id) ?? 0);
+            const index = appContext.stickerIndex.get(comment.id) ?? 0;
+            setStickerIndex(getStickerIndex(index));
         }
+    }, [appContext.stickerIndex]);
 
-    }, [comment])
+    useEffect(() => {
+        updateSticker(comment)
+    }, [comment, appContext.stickerIndex])
 
     function renderReply() {
         if (hasActiveReply) {
@@ -104,14 +107,8 @@ const Comment:React.FC<CommentProps> = ({
             const updatedComment = commentBackend.map.get(comment.id);
             if (!updatedComment) { return; }
 
-            if (updatedComment.flagged) {
-                if (!appContext.stickerIndex.has(updatedComment.id)) {
-                    const sz = appContext.stickerIndex.size;
-                    appContext.stickerIndex.set(updatedComment.id, sz);
-                }
-            }
-
             setComment(updatedComment);
+            updateSticker(updatedComment);
         });
     }, [localComment]);
 
