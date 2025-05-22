@@ -1,7 +1,6 @@
 import env from "../../env"
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
-import { getStickerIndex } from "./Sticker";
 
 export default class CommentEntry {
     id: number
@@ -13,7 +12,6 @@ export default class CommentEntry {
     flagged: boolean
     name: string | null
     visitorid: number
-    stickerIndex: number | null
 
     constructor(row:any) {
         this.id = row.id;
@@ -26,8 +24,6 @@ export default class CommentEntry {
         this.visitorid = row.visitorid;
 
         this.children = [];
-
-        this.stickerIndex = getStickerIndex();
     };
 
     update(target: CommentEntry) {

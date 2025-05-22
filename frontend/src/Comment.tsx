@@ -6,7 +6,8 @@ import { AppContext } from "./App";
 import EventEmitter from "reactjs-eventemitter";
 import { findHyperlinks } from "./CommentUtil";
 import { NameList } from "./AdminMain";
-import { Stickers } from "./Sticker";
+import { getStickerIndex, Stickers } from "./Sticker";
+import useMount from "./useMount";
 
 interface CommentProps {
     comment: CommentEntry,
@@ -64,6 +65,19 @@ const Comment:React.FC<CommentProps> = ({
     const appContext = useContext(AppContext);
     const [localComment, setComment] = useState(comment);
     const [time, setTime] = useState("");
+    const [stickerIndex, setStickerIndex] = useState<number>(0);
+
+    useEffect(() => {
+        if (comment.flagged) {
+            if (!appContext.stickerIndex.has(comment.id)) {
+                const sz = appContext.stickerIndex.size;
+                appContext.stickerIndex.set(comment.id, sz);
+            }
+
+            setStickerIndex(appContext.stickerIndex.get(comment.id) ?? 0);
+        }
+
+    }, [comment])
 
     function renderReply() {
         if (hasActiveReply) {
@@ -89,6 +103,13 @@ const Comment:React.FC<CommentProps> = ({
             if (!commentBackend) { return; }
             const updatedComment = commentBackend.map.get(comment.id);
             if (!updatedComment) { return; }
+
+            if (updatedComment.flagged) {
+                if (!appContext.stickerIndex.has(updatedComment.id)) {
+                    const sz = appContext.stickerIndex.size;
+                    appContext.stickerIndex.set(updatedComment.id, sz);
+                }
+            }
 
             setComment(updatedComment);
         });
@@ -151,8 +172,8 @@ const Comment:React.FC<CommentProps> = ({
 
 
     function renderFlaggedContent(isFlagged:Boolean):JSX.Element {
-        if (!isFlagged || comment.stickerIndex == null) { return (<></>)}
-        const image = Stickers[comment.stickerIndex];
+        if (!isFlagged) { return (<></>)}
+        const image = Stickers[stickerIndex ?? 0];
         return (<img src={image} className="flaggedImage"/>)
     }
 

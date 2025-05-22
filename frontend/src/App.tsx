@@ -30,6 +30,7 @@ export interface AppContextProps {
     expandedComments: Set<number>,
     activeReply: ActiveReplyData | null,
     onPosted: () => void,
+    stickerIndex: Map<number, number>,
 };
 
 export const AppContext = createContext<AppContextProps>({
@@ -42,6 +43,7 @@ export const AppContext = createContext<AppContextProps>({
     expandedComments: new Set(),
     activeReply: null,
     onPosted: () => {},
+    stickerIndex: new Map()
 });
 
 export interface AppUpdateContextProps {

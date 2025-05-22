@@ -27,22 +27,39 @@ async function getSortedFilterList(): Promise<Map<string, string[]>> {
     return ret;
 }
 
-export async function filterString(input:string):Promise<string> {
-    const blackList = await getSortedFilterList();
-    
-    const stripped:string[] = []
-    const index:number[] = []
-    
-    const a = 'a'.charCodeAt(0);
+function matchFilter(input:string[], filter:string[]):number | null {
+    console.log('comparing ' + input + ' with ' + filter);
+    let maxStart = input.length - filter.length;
+    let i = 0;
+    for (i = 0; i <= maxStart; i++) {
+        let match = true;
+        let k = 0;
+        for (k = 0; k < filter.length; k++) {
+            if (filter[k] != input[i + k]) {
+                match = false;
+                break;
+            }
+        }
+
+        if (match) {
+            return i;
+        }
+    }
+
+    return null;
+}
+
+function stripSpaces(input:string):{stripped: string[], index: number[]} {
+    const a = 'a'.charCodeAt(0);0
     const z = 'z'.charCodeAt(0);
     const A = 'A'.charCodeAt(0);
     const Z = 'Z'.charCodeAt(0);
-    const sqbrl = '['.charCodeAt(0);
-    const sqbrr = ']'.charCodeAt(0);
-    
+
+    const stripped:string[] = [];
+    const index:number[] = [];
     for (let i = 0; i < input.length; i++) {
         let intval = input.charCodeAt(i);
-        if ((intval >= a && intval <= z) || intval == sqbrl || intval == sqbrr) {
+        if (intval >= a && intval <= z) {
             index.push(i);
             stripped.push(String.fromCharCode(intval));
         } else if (intval >= A && intval <= Z) {
@@ -51,29 +68,29 @@ export async function filterString(input:string):Promise<string> {
         }
     }
 
+    return {stripped, index};
+}
+
+export async function filterString(input:string):Promise<string> {
+    const blackList = await getSortedFilterList();
+    
+    const {stripped, index} = stripSpaces(input);
+
+    let i:number | null = null;
     let matched: string | null = null;
-    let i = 0;
-    for (i = 0; i < stripped.length; i++) {
-        for (let [key, value] of blackList) {
-            let match = true;
-            for (let k = 0; k < key.length; k++) {
-                if (i + k >= stripped.length || key[k] != stripped[i + k]) {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match) {
-                matched = key;
-            }
-        }
-
-        if (matched) {
+    let matchArr: string[] | null = null;
+    for (let [key, value] of blackList) {
+        const strippedKey = stripSpaces(key);
+        i = matchFilter(stripped, strippedKey.stripped);
+        if (i != null) {
+            console.log("matched " + key);
+            matched = key;
+            matchArr = strippedKey.stripped;
             break;
         }
     }
 
-    if (!matched) {
+    if (!matched || i == null || !matchArr) {
         return input.substring(0);
     }
 
@@ -83,14 +100,14 @@ export async function filterString(input:string):Promise<string> {
     const pick = Math.min(picks.length -1, Math.floor(Math.random() * picks.length));
     ret = ret + picks[pick] + " ";
 
-    const nextIdx = i + matched.length;
+    const nextIdx = i + matchArr.length;
     //console.log(nextIdx + JSON.stringify(index))
     if (nextIdx >= index.length) {
         return ret;
     }
 
     const next = index[nextIdx];
-    const tail = filterString(input.substring(next));
+    const tail = await filterString(input.substring(next));
     ret = ret + tail;
 
     return ret;

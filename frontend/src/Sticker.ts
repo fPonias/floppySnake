@@ -3,19 +3,12 @@ import env from "../../env"
 
 const prefix = env.api + "/img/";
 export const Stickers = [
+    prefix + "runningMouf.jpg",
     prefix + "chickenLegs.jpg",
-    prefix + "snek.jpg",
     prefix + "actionFigure.jpg"
 ];
 
-let current = -1;
-
-export function getStickerIndex():number {
+export function getStickerIndex(index: number):number {
     const count = Stickers.length;
-    current += 1;
-    if (current == count) {
-        current = 0;
-    }
-
-    return current;
+    return index % count;
 }
