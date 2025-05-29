@@ -239,14 +239,14 @@ sectigo.com
         }
 
         const json = req.body;
-        if (!json.comment) {
-            console.log("post comment empty.");
+        if (json.comment === undefined || json.name === undefined) {
+            console.log("post missing required parameters.");
             res.status(500).send();
             return;
         }
 
-        let original = json.comment.substring(0, 4096);
-        let name = json.name ?? null;
+        let original = json.comment.toString().substring(0, 4096);
+        let name = json.name.toString();
         const parent = json.parent ?? null;
         const postid = json.postid ?? 0;
         const now = new Date().getTime();
