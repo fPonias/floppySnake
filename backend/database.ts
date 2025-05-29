@@ -117,17 +117,25 @@ export const createComment = async (
 
         const now = new Date().getTime();
 
-        let text = `SELECT comment.updated FROM comment
-            JOIN visitor ON visitor.id = comment.visitorid
-            WHERE visitor.token=$1 ORDER BY updated DESC LIMIT 1
-        `;
+        let text = `SELECT updated, created FROM visitor WHERE visitor.token=$1`;
         let result = await pool.query(text, [token]);
-        if (result.rows.length > 0) {
-            const diff = now - result.rows[0].updated;
-            if (diff < 1000) {
-                throw new Error("comment posted too quickly");
-            }
+        if (result.rows.length == 0) {
+            throw new Error("invalid user posted");
         }
+        
+        let diff = now - result.rows[0].updated;
+        if (diff < 1000) {
+            throw new Error("comment posted too quickly");
+        }
+
+        diff = now - result.rows[0].created;
+        console.log("user create diff " + diff);
+        if (diff < 12000) {
+            throw new Error("new user posted too quickly");
+        }
+
+        text = `UPDATE visitor SET updated = $1 WHERE token = $2`;
+        await pool.query(text, [new Date().getTime(), token]);
 
         const short = comment.substring(0, 400);
         text = `INSERT INTO comment (parent, name, posted, updated, comment, postid, original, flagged, visitorid)
@@ -250,8 +258,8 @@ export async function checkToken(token: string, ip:string) {
         let visitorid  = 0;
         if (result.rows.length == 0) {
             console.log("new visitor");
-            text = "INSERT INTO visitor (token) VALUES ($1) RETURNING id";
-            result = await pool.query(text, [token]);
+            text = "INSERT INTO visitor (token, updated, created) VALUES ($1, $2, $2) RETURNING id";
+            result = await pool.query(text, [token, new Date().getTime()]);
             visitorid = result.rows[0].id;
         } else {
             visitorid = result.rows[0].id;

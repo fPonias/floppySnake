@@ -204,7 +204,7 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
                 style={{ left: nameListOffset[0], top: nameListOffset[1] }}
             >
                 <div className="userBlockDiv">
-                    <div>block</div>
+                    <div>block {userData.visitorid}</div>
                     <input type="checkbox" checked={userData.blocked} onChange={() => {onBlocked(userData, !userData.blocked)}}/>
                 </div>
                 <div>
