@@ -73,6 +73,11 @@ export default class MyWebSocket {
         }
     }
 
+    broadcastBlocked(updated: number) {
+        const message = JSON.stringify({action: "block", updated: updated});
+        this.sendBroadcast(message);
+    }
+
     broadcastNewPost(postid: number, updated: number) {
         const message = JSON.stringify({ action: "new", postid: postid, updated: updated });
         this.sendBroadcast(message);

@@ -17,7 +17,9 @@ import {
     getFilterList,
     addFilter,
     updateFilter,
-    deleteFilter
+    deleteFilter,
+    blockUser,
+    blockIP
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -494,14 +496,13 @@ sectigo.com
         } else {
             updateFilter(json).then(() => {
                 res.status(200).send("success");
+                MyWebSocket.instance.broadcastFiltersUpdated();
             }).catch(err => {
                 console.log("update filter failed with " + err);
                 res.status(500).send("nope");
                 return;
             })
         }
-
-        MyWebSocket.instance.broadcastFiltersUpdated();
     });
 
     app.delete("/filter/:id{/:token}", (req, res) => {
@@ -515,12 +516,53 @@ sectigo.com
 
         deleteFilter(req.params.id).then(() => {
             res.status(200).send("success");
+            MyWebSocket.instance.broadcastFiltersUpdated();
         }).catch(err => {
             console.log("delete filter failed with" + err);
             res.status(500).send("nope");
             return
         })
+    })
 
-        MyWebSocket.instance.broadcastFiltersUpdated();
+    app.post("/blockUser{/:token}", (req, res) => {
+        console.log("block user called");
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        const now = new Date().getTime();
+        const json = req.body;
+        blockUser(json.id, json.blocked).then(() => {
+            res.status(200).send("success");
+            MyWebSocket.instance.broadcastBlocked(now);
+        }).catch(err => {
+            console.log("block user failed with " + err);
+            res.status(500).send("nope");
+            return;
+        })
+    })
+
+    app.post("/blockIP{/:token}", (req, res) => {
+        console.log("block user called");
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        const now = new Date().getTime();
+        const json = req.body;
+        blockIP(json.address, json.blocked).then(() => {
+            res.status(200).send("success");
+            MyWebSocket.instance.broadcastBlocked(now);
+        }).catch(err => {
+            console.log("block user failed with " + err);
+            res.status(500).send("nope");
+            return;
+        })
     })
 }

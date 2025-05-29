@@ -9,9 +9,20 @@ const { Pool } = pkg;
 
 const pool = new Pool(env.dbArgs);
 
+const commentQuery = `
+    SELECT comment.*, b.blocked FROM comment
+    LEFT OUTER JOIN (
+    	SELECT ip.blocked OR visitor.blocked AS blocked, visitor.id FROM ip_visitor iv
+    		LEFT OUTER JOIN ip ON ip.id = iv.ipid
+    		LEFT OUTER JOIN visitor ON visitor.id = iv.visitorid
+    ) b ON b.id = comment.visitorid
+`
+
+const commentLimit = 300
+
 export const getTopComments = async (postid: number): Promise<any[]> => {
     try {
-        const res = await pool.query("SELECT * FROM comment WHERE postid = $1 ORDER BY updated DESC LIMIT 1000", [postid]);
+        const res = await pool.query(`${commentQuery} WHERE postid = $1 ORDER BY updated DESC LIMIT ${commentLimit}`, [postid]);
         return res.rows;
     } catch (err) {
         console.error(err);
@@ -21,7 +32,7 @@ export const getTopComments = async (postid: number): Promise<any[]> => {
 
 export const getRecentComments = async (postid: number, after: number):Promise<any[]> => {
     try {
-        const res = await pool.query("SELECT * FROM comment WHERE updated >= $1 AND postid = $2 ORDER BY updated DESC LIMIT 1000", [after, postid]);
+        const res = await pool.query(`${commentQuery} WHERE updated >= $1 AND postid = $2 ORDER BY updated DESC LIMIT ${commentLimit}`, [after, postid]);
         return res.rows;
     } catch(err) {
         console.error(err);
@@ -32,7 +43,7 @@ export const getRecentComments = async (postid: number, after: number):Promise<a
 
 export const getOlderComments = async (postid: number, before: number): Promise<any[]> => {
     try {
-        const res = await pool.query("SELECT * FROM comment WHERE updated < $1 AND postid = $2 ORDER BY updated DESC LIMIT 1000", [before, postid]);
+        const res = await pool.query(`${commentQuery} WHERE updated < $1 AND postid = $2 ORDER BY updated DESC LIMIT ${commentLimit}`, [before, postid]);
         return res.rows;
     } catch (err) {
         console.error(err);
@@ -43,7 +54,7 @@ export const getOlderComments = async (postid: number, before: number): Promise<
 
 export const getComment = async (id:number): Promise<any> => {
     try {
-        const res = await pool.query("SELECT * FROM comment WHERE id = $1", [id]);
+        const res = await pool.query(`${commentQuery} WHERE id = $1`, [id]);
         return res.rows[0];
     } catch (err) {
         console.error(err);
@@ -97,7 +108,7 @@ export const createComment = async (
     postid: number, 
     parent:number | null,
     original: string | null,
-):Promise<CommentEntry | null> => {
+) => {
     try {
         if(!MyWebSocket.instance.isLoggedIn(token)) {
             console.log("invalid user attempted to post comment");
@@ -261,6 +272,11 @@ export async function checkToken(token: string, ip:string) {
     }
 }
 
+export interface IPAddress {
+    address: string,
+    blocked: boolean,
+}
+
 export interface UserData {
     commentCount: number,
     flaggedCount: number,
@@ -268,13 +284,14 @@ export interface UserData {
     visitorid: number,
     token: string,
     alias: string,
-    ipAddresses: string[],
+    ipAddresses: IPAddress[],
     names: string[],
     isActive: boolean,
+    blocked: boolean,
 }
 
 export async function getUserData(): Promise<UserData[]> {
-    const text = `SELECT c.count, f.flagged, p.lastpost, v.token, v.id as visitorid, v.alias
+    const text = `SELECT c.count, f.flagged, p.lastpost, v.token, v.id as visitorid, v.alias, v.blocked
 		FROM visitor v
         LEFT OUTER JOIN(SELECT COUNT(visitorid) count, visitorid FROM comment GROUP BY visitorid ORDER BY count DESC) c
 			ON (c.visitorid = v.id)
@@ -296,7 +313,8 @@ export async function getUserData(): Promise<UserData[]> {
             alias: row.alias,
             ipAddresses: [],
             names: [],
-            isActive: false
+            isActive: false,
+            blocked: row.blocked
         }
 
         index.set(item.visitorid, ret.length);
@@ -317,7 +335,10 @@ export async function getUserData(): Promise<UserData[]> {
         if (idx == undefined) { continue }
 
         const item = ret[idx];
-        item.ipAddresses.push(addressObj.address);
+        item.ipAddresses.push({
+            address: addressObj.address, 
+            blocked: addressObj.blocked
+        });
     }
 
     return ret;
@@ -328,15 +349,15 @@ export async function getUserNames(): Promise<{name: string, visitorid: number}[
 			FROM comment 
 			WHERE visitorid IS NOT null AND name != ''
 			GROUP BY name
-			ORDER BY visitorid, posted DESC
+			ORDER BY posted DESC
     `
 
     const result = await pool.query(text, []);
     return result.rows;
 }
 
-export async function getUserAddresses(): Promise<{ address: string, posted: number | null, firstvisited: number, id: number }[]> {
-    const text = `SELECT v.id, c.posted, i.firstvisited, i.address FROM visitor v
+export async function getUserAddresses(): Promise<{ address: string, posted: number | null, firstvisited: number, id: number, blocked: boolean }[]> {
+    const text = `SELECT v.id, c.posted, i.firstvisited, i.address, i.blocked FROM visitor v
             LEFT OUTER JOIN (SELECT MAX(posted) posted, visitorid FROM comment GROUP BY visitorid) c ON v.id = c.visitorid
             JOIN ip_visitor iv ON iv.visitorid = v.id
             JOIN ip i ON i.id = iv.ipid
@@ -439,5 +460,37 @@ export async function deleteFilter(arg: number) {
         await pool.query(text, [arg]);
     } catch (e) {
         console.log("failed to delete filter " + JSON.stringify(e));
+    }
+}
+
+export async function blockUser(id: number, blocked: boolean) {
+    try {
+        let text = `UPDATE visitor SET blocked = $2 WHERE id = $1`
+        await pool.query(text, [id, blocked]);
+
+        text = `UPDATE comment SET updated = $1 WHERE visitorid = $2`
+        const now = new Date().getTime();
+        await pool.query(text, [now, id]);
+    } catch (e) {
+        console.log("failed to block user " + id)
+    }
+}
+
+export async function blockIP(ip: string, blocked: boolean) {
+    try {
+        let text = `UPDATE ip SET blocked = $2 WHERE address = $1`
+        await pool.query(text, [ip, blocked]);
+
+        text = `UPDATE comment SET updated = $1 FROM (
+                	SELECT DISTINCT visitor.id AS visitorid FROM visitor
+                	JOIN ip_visitor iv ON iv.visitorid = visitor.id
+                	JOIN ip i ON i.id = iv.ipid
+                	WHERE i.address = $2
+                ) v WHERE comment.visitorid = v.visitorid
+            `;
+        const now = new Date().getTime();
+        await pool.query(text, [now, ip]);
+    } catch (e) {
+        console.log("failed to block ip " + ip);
     }
 }

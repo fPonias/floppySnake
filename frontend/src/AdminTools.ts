@@ -1,15 +1,21 @@
 import env from "../../env"
 
+export interface IPAddress {
+    address: string, 
+    blocked: boolean,
+}
+
 export interface UserData {
     commentCount: number,
     flaggedCount: number,
     lastPost: number,
     visitorid: number,
     token: string,
-    ipAddress: string,
+    ipAddresses: IPAddress[],
     names: string[],
     isActive: boolean
-    alias: string
+    alias: string,
+    blocked: boolean
 }
 
 export interface Filter {
@@ -146,6 +152,52 @@ export class AdminTools {
             return;
         } catch (err) {
             console.log("failed to add filter " + JSON.stringify(err));
+        }
+    }
+    
+    async blockUser(userId: number, blocked: boolean) {
+        if (!this.adminToken) {
+            return;
+        }
+
+        try {
+            const body = JSON.stringify({id: userId, blocked: blocked});
+            const url = env.api + "/blockUser/" + this.adminToken;
+            await fetch(url, {
+                method: "POST", 
+                credentials: "include",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: body
+            });
+
+            return;
+        } catch (err) {
+            console.log("failed to block user " + JSON.stringify(err));
+        }
+    }
+
+    async blockIP(address: string, blocked: boolean) {
+        if (!this.adminToken) {
+            return;
+        }
+
+        try {
+            const body = JSON.stringify({ address: address, blocked: blocked });
+            const url = env.api + "/blockIP/" + this.adminToken;
+            await fetch(url, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: body
+            });
+
+            return;
+        } catch (err) {
+            console.log("failed to block user " + JSON.stringify(err));
         }
     }
 }

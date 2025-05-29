@@ -5,7 +5,7 @@ import { AppContext } from "./App";
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
 import { findHyperlinks } from "./CommentUtil";
-import { NameList } from "./AdminMain";
+import { UserDetails } from "./AdminMain";
 import { getStickerIndex, Stickers } from "./Sticker";
 
 interface CommentProps {
@@ -94,7 +94,7 @@ const Comment:React.FC<CommentProps> = ({
     }
 
     useEffect(() => {
-        if (!localComment || localComment.id != comment.id) {
+        if (!localComment || localComment.id != comment.id || comment.blocked != localComment.blocked) {
             setComment(comment);
         }
     }, [comment, localComment]);
@@ -155,7 +155,7 @@ const Comment:React.FC<CommentProps> = ({
         if (!data) { return (<></>) }
 
         return (
-            <NameList nameListOffset={nameListOffset} userData={data} onClosed={closeNameList} />
+            <UserDetails nameListOffset={nameListOffset} userData={data} onClosed={closeNameList} />
         )
     }
 
@@ -245,8 +245,14 @@ const Comment:React.FC<CommentProps> = ({
     let nameClass = "name"
     if (alias) { nameClass += " censored"; }
 
+
+    let commentClass = "comment";
+    if (localComment.blocked) {
+        commentClass += " blocked";
+    }
+
     return (<>
-        <div className='comment' key={"comment-" + localComment.id} id={localComment.id.toString()} style={{ marginLeft: indent + "px" }}>
+        <div className={commentClass} key={"comment-" + localComment.id} id={localComment.id.toString()} style={{ marginLeft: indent + "px" }}>
             <div className="commentLeft" style={(localComment.flagged) ? {minHeight: 160} : {}}>
                 <div className='header' onClick={(ev) => {onNameClicked(localComment.visitorid, ev)}}>
                     <span className={nameClass}>{name}</span>

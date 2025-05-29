@@ -12,6 +12,7 @@ export default class CommentEntry {
     flagged: boolean
     name: string | null
     visitorid: number
+    blocked: boolean
 
     constructor(row:any) {
         this.id = row.id;
@@ -22,6 +23,7 @@ export default class CommentEntry {
         this.flagged = row.flagged;
         this.name = row.name;
         this.visitorid = row.visitorid;
+        this.blocked = row.blocked;
 
         this.children = [];
     };
@@ -136,6 +138,10 @@ export class CommentEntries {
         return this.getComments(env.api + "/comments/" + this.postid);
     }
 
+    async getFrom(from: number) {
+        return this.getComments(env.api + "/comments/" + this.postid + "/after/" + from);
+    }
+
     async getNewest() {
         return this.getComments(env.api + "/comments/" + this.postid + "/after/" + this.newest);
     }
@@ -174,8 +180,6 @@ export class CommentEntries {
             }
 
             for (let comment of comments) {
-                if (this.map.has(comment.id)) { continue; }
-
                 this.map.set(comment.id, comment);
 
                 if (comment.updated > this.newest) {

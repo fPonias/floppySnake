@@ -1,6 +1,6 @@
 import React, { JSX, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppContext, AppUpdateContext } from "./App";
-import { UserData } from "./AdminTools";
+import { IPAddress, UserData } from "./AdminTools";
 
 interface AdminMainProps {
 }
@@ -30,6 +30,25 @@ export const AdminMain:React.FC<AdminMainProps> = ({
             appContext.visitorBackend?.updateAlias({id: id, alias: alias}, adminToken);
         }
     */
+
+    function onUserBlocked(userData: UserData, blocked: boolean) {
+        const adminToken = appContext.adminBackend?.adminToken;
+        if (!adminToken) { return; }
+        if (!appContext.adminBackend) { return; }
+
+        appContext.adminBackend.adminToken = adminToken;
+        appContext.adminBackend?.blockUser(userData.visitorid, blocked);
+    }
+
+    function onIPBlocked(address: string, blocked: boolean) {
+        const adminToken = appContext.adminBackend?.adminToken;
+        if (!adminToken) { return; }
+        if (!appContext.adminBackend) { return; }
+
+        appContext.adminBackend.adminToken = adminToken;
+        appContext.adminBackend.blockIP(address, blocked);
+    }
+
     function closeNameList() {
         setNameListOpen(false);
     }
@@ -44,7 +63,13 @@ export const AdminMain:React.FC<AdminMainProps> = ({
         if (!data) { return (<></>) }
 
         return (
-            <NameList nameListOffset={nameListOffset} userData={data} onClosed={closeNameList} />
+            <UserDetails 
+                nameListOffset={nameListOffset} 
+                userData={data} 
+                onClosed={closeNameList} 
+                onBlocked={(data, blocked) => {onUserBlocked(data, blocked)}}
+                onIPBlocked={(address, blocked) => {onIPBlocked(address, blocked)}}
+            />
         )
     }
 
@@ -131,22 +156,30 @@ const AdminLine: React.FC<AdminLineProps> = ({
     </tr>)
 }
 
-interface NameListProps {
+
+interface UserDetailsProps {
     userData: UserData,
-    nameListOffset: number[]
-    onClosed: () => void
+    nameListOffset: number[],
+    onClosed: () => void,
+    onBlocked: (userData: UserData, blocked: boolean) => void,
+    onIPBlocked: (address: string, blocked: boolean) => void,
 }
 
-export const NameList: React.FC<NameListProps> = ({
+export const UserDetails: React.FC<UserDetailsProps> = ({
     userData,
     nameListOffset,
-    onClosed
-}: NameListProps) => {
+    onClosed,
+    onBlocked,
+    onIPBlocked,
+}: UserDetailsProps) => {
     const nameListOpened = useRef(0);
+    const selfClicked = useRef(0);
 
     const clickCallback = useCallback(() => {
         const now = new Date().getTime();
-        if (now - nameListOpened.current <= 100) { return; }
+        const diff = now - nameListOpened.current;
+        const selfDiff = now - selfClicked.current;
+        if (diff <= 100 || selfDiff < 100) { return; }
         onClosed()
     }, [nameListOpened]);
     const callbackRef = useRef(clickCallback);
@@ -161,13 +194,49 @@ export const NameList: React.FC<NameListProps> = ({
         }
     });
 
+    function selfClickedEvt() {
+        selfClicked.current = new Date().getTime();
+    }
+
     return (
-        <div className="nameList"
-            style={{ left: nameListOffset[0], top: nameListOffset[1] }}
-        >
-            {userData.names.map((name) => {
-                return (<div>{name}</div>);
-            })}
-        </div>
-    )
+        <div className="nameListContainer" onClick={() => { selfClickedEvt() }}>
+            <div className="nameList"
+                style={{ left: nameListOffset[0], top: nameListOffset[1] }}
+            >
+                <div className="userBlockDiv">
+                    <div>block</div>
+                    <input type="checkbox" checked={userData.blocked} onChange={() => {onBlocked(userData, !userData.blocked)}}/>
+                </div>
+                <div>
+                    {userData.names.map((name) => {
+                        return (<div key={Math.random()}>{name}</div>);
+                    })}
+                </div>
+                <div className="line"></div>
+                <div>
+                    {userData.ipAddresses.map((address) => {
+                        return (<IPEntry ipData={address} onBlocked={(data) => {onIPBlocked(data, !address.blocked)}} />)
+                    })}
+                </div>
+            </div>
+        </div>)
+}
+
+interface IPEntryProps {
+    ipData: IPAddress,
+    onBlocked: (address:string) => void
+};
+
+export const IPEntry: React.FC<IPEntryProps> = ({
+    ipData,
+    onBlocked
+}:IPEntryProps) => {
+    let stripped = ipData.address;
+    if (stripped.startsWith("::ffff:")) {
+        stripped = stripped.substring(7);
+    }
+    return (<div key={Math.random()} className="ipBlockDiv">
+        <div>{stripped}</div>
+        <input type="checkbox" checked={ipData.blocked} onClick={() => {onBlocked(ipData.address)}} />
+    </div>)
 }

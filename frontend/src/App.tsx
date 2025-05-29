@@ -179,6 +179,20 @@ function App() {
                         () => { setTriggerAdminUpdate(); }
                     )
                 }
+            } else if (data.action == "block") {
+                if (appContext.adminBackend && appContext.adminEnabled) {
+                    appContext.adminBackend.runUpdate().then(() => {
+                        appContext.adminBackend?.runUpdateFilters().then(
+                            () => { setTriggerAdminUpdate(); }
+                        )
+                    })
+                }
+
+                const date = data.updated;
+                const commentBack = appContext.commentBackend;
+
+                if (!commentBack) { return; }
+                forceUpdate(date).then(() => {});
             }
         },
     });
@@ -287,6 +301,12 @@ function App() {
 
     async function doUpdate() {
         await appContext.commentBackend?.getNewest();
+        await appContext.commentBackend?.sortTree();
+        setComments(appContext.commentBackend?.tree ?? []);
+    }
+
+    async function forceUpdate(from: number) {
+        await appContext.commentBackend?.getFrom(from);
         await appContext.commentBackend?.sortTree();
         setComments(appContext.commentBackend?.tree ?? []);
     }
