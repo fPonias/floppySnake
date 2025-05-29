@@ -28,7 +28,7 @@ async function getSortedFilterList(): Promise<Map<string, string[]>> {
 }
 
 function matchFilter(input:string[], filter:string[]):number | null {
-    console.log('comparing ' + input + ' with ' + filter);
+    //console.log('comparing ' + input + ' with ' + filter);
     let maxStart = input.length - filter.length;
     let i = 0;
     for (i = 0; i <= maxStart; i++) {
