@@ -8,6 +8,7 @@ export const Stickers = [
     prefix + "actionFigure.jpg",
     prefix + "snek.jpg",
     prefix + "borg.jpg",
+    prefix + "barney.jpg",
 ];
 
 export function getStickerIndex(index: number):number {
