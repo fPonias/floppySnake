@@ -19,9 +19,25 @@ export const AdminMain:React.FC<AdminMainProps> = ({
         setUserData(appContext.adminBackend?.userData ?? []);
     }, [appUpdateContext.triggerAdminUpdate])
 ;
-    const dt = new Date()
-    dt.setHours(0, 0, 0, 0);
-    const today = dt.getTime() - (1000 * 60 * 60 * 24);
+    const [today, setToday] = useState(0);
+    const [tenMin, setTenMin] = useState(0);
+    
+    const tick = useCallback(() => {
+        const ts = new Date().getTime();
+        setToday(ts - (1000 * 60 * 60 * 8));
+        setTenMin(ts - (1000 * 60 * 10));
+    }, [today, tenMin]);
+    
+    useEffect(() => {
+        const intVal = setInterval(() => {
+            tick();
+        }, 1000);
+
+        return () => {
+            clearInterval(intVal);
+        }
+    }, [tick]);
+
     /*
         function triggerAliasUpdate(id: number, alias: string) {
             const adminToken = appContext.adminBackend?.adminToken;
@@ -103,6 +119,8 @@ export const AdminMain:React.FC<AdminMainProps> = ({
     const filtered = userData.filter((value) => {
         if (value.isActive) { return true; }
         if (value.lastPost >= today) { return true; }
+        const diff = value.updated - tenMin;
+        if (diff >= 0) { return true; }
 
         return false;
     })

@@ -263,6 +263,8 @@ export async function checkToken(token: string, ip:string) {
             visitorid = result.rows[0].id;
         } else {
             visitorid = result.rows[0].id;
+            text = "UPDATE visitor SET updated = $1 WHERE id = $2";
+            await pool.query(text, [new Date().getTime(), visitorid]);
         }
 
         const ipid = await checkIp(ip);
@@ -292,6 +294,7 @@ export interface UserData {
     visitorid: number,
     token: string,
     alias: string,
+    updated: number,
     ipAddresses: IPAddress[],
     names: string[],
     isActive: boolean,
@@ -299,7 +302,7 @@ export interface UserData {
 }
 
 export async function getUserData(): Promise<UserData[]> {
-    const text = `SELECT c.count, f.flagged, p.lastpost, v.token, v.id as visitorid, v.alias, v.blocked
+    const text = `SELECT c.count, f.flagged, p.lastpost, v.token, v.id as visitorid, v.alias, v.blocked, v.updated
 		FROM visitor v
         LEFT OUTER JOIN(SELECT COUNT(visitorid) count, visitorid FROM comment GROUP BY visitorid ORDER BY count DESC) c
 			ON (c.visitorid = v.id)
@@ -319,6 +322,7 @@ export async function getUserData(): Promise<UserData[]> {
             visitorid: row.visitorid,
             token: row.token,
             alias: row.alias,
+            updated: row.updated,
             ipAddresses: [],
             names: [],
             isActive: false,
@@ -353,11 +357,11 @@ export async function getUserData(): Promise<UserData[]> {
 }
 
 export async function getUserNames(): Promise<{name: string, visitorid: number}[]> {
-    const text = `SELECT name, MAX(visitorid) visitorid, MAX(posted) posted
-			FROM comment 
-			WHERE visitorid IS NOT null AND name != ''
-			GROUP BY name
-			ORDER BY posted DESC
+    const text = `SELECT name, visitorid, MAX(POSTED)
+    	FROM comment
+    	WHERE visitorid IS NOT NULL
+    	GROUP BY visitorid, name
+    	ORDER BY max DESC
     `
 
     const result = await pool.query(text, []);

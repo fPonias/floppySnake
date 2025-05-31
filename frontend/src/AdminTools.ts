@@ -11,6 +11,7 @@ export interface UserData {
     lastPost: number,
     visitorid: number,
     token: string,
+    updated: number,
     ipAddresses: IPAddress[],
     names: string[],
     isActive: boolean

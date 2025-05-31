@@ -321,6 +321,12 @@ function App() {
         setComments(appContext.commentBackend?.tree ?? []);
     }
 
+    const [commentCount, setCommentCount] = useState(0);
+    useEffect(() => {
+        const count = appContext.commentBackend?.count ?? 0;
+        setCommentCount(count);
+    }, [comments])
+
     function renderLoadMore() {
         const count = appContext.commentBackend?.count ?? 0;
         const map = appContext.commentBackend?.map;
@@ -405,9 +411,25 @@ function App() {
         )
     }
 
+    function renderCommentCount() {
+        const rand = Math.round(Math.random() * 6 + 1);
+        const count = (commentCount < 20) ? commentCount : commentCount * rand;
+        return (<div className="titleDiv">
+            <div>
+                <span className="title">Leave a comment</span> 
+            </div>
+            <div className='subtitle'>Haters will be ridiculed.</div>
+            <div className='count'>
+                <span className='commentCount'>{count}</span>
+                <span>Comments so far</span>
+            </div>
+        </div>)
+    }
+
     return (<div className='outer'>
         {renderAdminPanel()}
-        <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
+        {renderCommentCount()}
+        <FormComponent onAdminEnabled={(_) => onAdminEnabled()} />
         <div className='comments'>
             {renderComments(0, comments)}
             {renderLoadMore()}
