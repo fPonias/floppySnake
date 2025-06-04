@@ -54,7 +54,7 @@ export const getOlderComments = async (postid: number, before: number): Promise<
 
 export const getComment = async (id:number): Promise<any> => {
     try {
-        const res = await pool.query(`${commentQuery} WHERE id = $1`, [id]);
+        const res = await pool.query(`${commentQuery} WHERE comment.id = $1`, [id]);
         return res.rows[0];
     } catch (err) {
         console.error(err);
