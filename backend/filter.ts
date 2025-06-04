@@ -1,4 +1,5 @@
 import { getFilterList } from "./database";
+import fs from 'fs';
 
 const blackList = new Map<string, string[]>([
     ["kyle", ["Stan", "Kenny", "Cartman"]],
@@ -111,4 +112,37 @@ export async function filterString(input:string):Promise<string> {
     ret = ret + tail;
 
     return ret;
+}
+
+const ipBlacklistFile = './ip-blacklist.txt';
+let ipBlacklist: string[] = []
+let ipFileSz = 0;
+function reloadIpBlacklist() {
+    try {
+        const stats = fs.statSync(ipBlacklistFile);
+        if (stats.size == ipFileSz) { return; }
+
+        const data = fs.readFileSync(ipBlacklistFile, { encoding: 'utf8' });
+        ipBlacklist = data.split('\n');
+        ipFileSz = stats.size
+        console.log("reloaded ip blacklist with " + ipBlacklist.length + " entries");
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+export function isBlacklisted(ip: string): boolean {
+    reloadIpBlacklist();
+    const isIp4 = ip.startsWith("::ffff:");
+    const ip4 = ip.substring(7);
+
+    for (let i = 0; i < ipBlacklist.length; i++) {
+        if (ipBlacklist[i].trim().length == 0) { continue; }
+        if (ipBlacklist[i].startsWith('#')) { continue; }
+        
+        if (!isIp4 && ip.startsWith(ipBlacklist[i])) { return true; }
+        else if (isIp4 && ip4.startsWith(ipBlacklist[i])) { return true; }
+    }
+
+    return false;
 }

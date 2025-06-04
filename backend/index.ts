@@ -13,6 +13,7 @@ import {WebSocketServer} from 'ws';
 import { resetKey } from './adminKey';
 import cookieParser from 'cookie-parser';
 import { checkIp } from './database';
+import { isBlacklisted } from './filter';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -44,36 +45,6 @@ const accessLogStream = fs.createWriteStream(
 
 // setup the logger
 app.use(morgan('common', { stream: accessLogStream }));
-
-const ipBlacklistFile = './ip-blacklist.txt';
-let ipBlacklist: string[] = []
-let ipFileSz = 0;
-function reloadIpBlacklist() {
-    try {
-        const stats = fs.statSync(ipBlacklistFile);
-        if (stats.size == ipFileSz) { return; }
-
-        const data = fs.readFileSync(ipBlacklistFile, { encoding: 'utf8' });
-        ipBlacklist = data.split('\n');
-        ipFileSz = stats.size
-        console.log("reloaded ip blacklist with " + ipBlacklist.length + " entries");
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-function isBlacklisted(ip: string): boolean {
-    reloadIpBlacklist();
-    const isIp4 = ip.startsWith("::ffff:");
-    const ip4 = ip.substring(7);
-
-    for (let prefix of ipBlacklist) {
-        if (!isIp4 && ip.startsWith(prefix)) { return true; }
-        else if (isIp4 && ip4.startsWith(prefix)) { return true; }
-    }
-
-    return false;
-}
 
 const ipSaver = async function (req, res, next) {
     await checkIp(req.ip);

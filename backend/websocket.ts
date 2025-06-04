@@ -4,6 +4,7 @@ import { v4 } from "uuid";
 import url from "url";
 import { checkToken, UserData } from './database';
 import { authorize, getGrants, isAuthorized } from './adminKey';
+import { isBlacklisted } from './filter';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -37,6 +38,13 @@ export default class MyWebSocket {
     }
 
     private onConnected(connection, request) {
+        const ip = request.socket.remoteAddress;
+        
+        if (isBlacklisted(ip)) {
+            console.log("banned websocket opened from " + ip);
+            return;
+        }
+
         const connData:connectionData = {
             connection: connection,
             id: this.connectionsNextId,

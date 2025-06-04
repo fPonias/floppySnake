@@ -28,6 +28,7 @@ dist-ssr
 env-real.js
 env.js
 env.ts
+ip-blacklist.txt
 
 *live-backup*
 *.sql
