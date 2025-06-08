@@ -25,7 +25,7 @@ export function findFirstHyperlink(message: string): string | null {
         }
     }
 
-    return message.substring(ret.index, end - ret.index);
+    return message.substring(ret.index, end);
 }
 
 function findHyperlink(message:string): {match: string, found: boolean, index: number, length: number} {
