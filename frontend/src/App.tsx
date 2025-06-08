@@ -13,6 +13,7 @@ import EventEmitter from "reactjs-eventemitter";
 import { AdminTools } from './AdminTools';
 import { AdminPanel } from './Admin';
 import VisitorEntries from './VisitorEntry';
+import { T } from './Troll';
 
 interface ActiveReplyData {
     name: string,
@@ -31,6 +32,7 @@ export interface AppContextProps {
     activeReply: ActiveReplyData | null,
     onPosted: () => void,
     stickerIndex: Map<number, number>,
+    g: boolean
 };
 
 export const AppContext = createContext<AppContextProps>({
@@ -43,7 +45,8 @@ export const AppContext = createContext<AppContextProps>({
     expandedComments: new Set(),
     activeReply: null,
     onPosted: () => {},
-    stickerIndex: new Map()
+    stickerIndex: new Map(),
+    g: false,
 });
 
 export interface AppUpdateContextProps {
@@ -121,6 +124,7 @@ function App() {
             } else if (data.action == "token") {
                 setCookie("apiToken", data.token);
                 appContext.apiToken = data.token;
+                appContext.g = data.g;
                 firstLoad();
 
                 if (cookies.token) {
@@ -285,6 +289,8 @@ function App() {
         }
     }
 
+    const troll = useRef(new T());
+
     async function firstLoad() {
         const allow = await appContext.commentBackend?.getAllowPosts();
         appContext.allowPosts = allow ?? false;
@@ -297,6 +303,17 @@ function App() {
 
         setComments(appContext.commentBackend?.tree ?? []);
         setLoading(false);
+
+        async function delayed() 
+        {
+            if (appContext.g) {
+                troll.current.doWork();
+            }
+        }
+
+        setTimeout(() => {
+            delayed();
+        }, 5000);
     }
 
     async function doUpdate() {

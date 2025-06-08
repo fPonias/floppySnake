@@ -4,7 +4,7 @@ import { v4 } from "uuid";
 import url from "url";
 import { checkToken, UserData } from './database';
 import { authorize, getGrants, isAuthorized } from './adminKey';
-import { isBlacklisted } from './filter';
+import { isBlacklisted, isGreylisted } from './filter';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -13,7 +13,8 @@ interface connectionData {
     id: number,
     token: string | undefined,
     ip: string,
-    isAdmin: boolean
+    isAdmin: boolean,
+    isGreylisted: boolean,
 }
 
 export default class MyWebSocket {
@@ -50,7 +51,8 @@ export default class MyWebSocket {
             id: this.connectionsNextId,
             ip: request.socket.remoteAddress,
             token: undefined,
-            isAdmin: false
+            isAdmin: false,
+             isGreylisted: false,
         };
         console.log("connection " + connData.id + " opened");
         this.connections.set(connData.id, connData);
@@ -148,13 +150,24 @@ export default class MyWebSocket {
                 console.log("creating new api token " + token)
             }
 
-            checkToken(token, connData.ip);
-            connData.token = token;
-            this.tokenIndex.add(token);
-            const message = JSON.stringify({ action: "token", token: token });
-            connection.send(message);
+            checkToken(token, connData.ip).then((visitorid) => {
+                connData.token = token;
+                this.tokenIndex.add(token);
 
-            this.sendAdminBroadcast(JSON.stringify({action: "login", token: token }));
+                if (visitorid != null) {
+                    connData.isGreylisted = isGreylisted(visitorid)
+                    if (connData.isGreylisted) {
+                        console.log("greylisted visitor " + visitorid + " logged in");
+                    } else {
+                        console.log("visitor " + visitorid + " logged in");
+                    }
+                }
+
+                const message = JSON.stringify({ action: "token", token: token, g: connData.isGreylisted });
+                connection.send(message);
+
+                this.sendAdminBroadcast(JSON.stringify({ action: "login", token: token }));
+            });
         } else if (json.action == "adminTokenVerify") {
             let adminToken = json.token;
             const isAdmin = isAuthorized(adminToken)

@@ -1,6 +1,7 @@
 import env from "../../env"
 // @ts-ignore
 import EventEmitter from "reactjs-eventemitter";
+import { findFirstHyperlink } from "./CommentUtil";
 
 export default class CommentEntry {
     id: number
@@ -13,6 +14,9 @@ export default class CommentEntry {
     name: string | null
     visitorid: number
     blocked: boolean
+    thumbTitle: string | null
+    thumbImg: string | null
+    thumbLink: string | null
 
     constructor(row:any) {
         this.id = row.id;
@@ -24,6 +28,9 @@ export default class CommentEntry {
         this.name = row.name;
         this.visitorid = row.visitorid;
         this.blocked = row.blocked;
+        this.thumbImg = row.thumbnail;
+        this.thumbTitle = row.thumbtitle;
+        this.thumbLink = findFirstHyperlink(row.comment);
 
         this.children = [];
     };

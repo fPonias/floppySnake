@@ -101,6 +101,70 @@ export const updateParent = async (id: number, date: number, failsafe: number = 
     }
 }
 
+const youtube = [
+    "youtu.be/",
+    "www.youtube.com/",
+    "youtube.com/",
+    "m.youtube.com/",
+]
+
+interface previewData {
+    title: string, 
+    imageUrl: string, 
+    start: number, 
+    url: string 
+}
+
+async function parseYouTube(str:string):Promise<previewData | null> {
+    const parts = str.split("=");
+    const id = parts[1];
+
+    const url = "https://www.googleapis.com/youtube/v3/videos" +
+        "?key=" + env.googleKey +
+        "&id=" + id +
+        "&part=snippet";
+
+    try {
+        const resp = await fetch(url);
+        const videoData = await resp.json();
+        const item = videoData.items[0].snippet;
+        const title = item.title;
+        const thumb = item.thumbnails.default;
+
+        return {
+            imageUrl: thumb.url,
+            start: 0,
+            url: str,
+            title: title
+        }
+    } catch(e) {
+        console.log("failed to fetch " + url + " with " + e);
+        return null;
+    }
+}
+
+async function getThumbDets(msg: string): Promise<previewData | null> {
+    var stringArr = msg.split(/(\s+)/);
+    
+    for (let i = 0; i < stringArr.length; i++) {
+        const str = stringArr[i];
+        if (!str.startsWith("http")) {
+            continue;
+        }
+
+        for (let j = 0; j < youtube.length; j++) {
+            if (str.startsWith(youtube[j]), 7){
+                const ret = await parseYouTube(str);
+                if (ret == null) { return null; }
+                ret.start = msg.indexOf(ret.url);
+                return ret;
+            }
+        }
+    }
+
+    return null;
+}
+
 export const createComment = async (
     token: string, 
     comment:string, 
@@ -134,6 +198,8 @@ export const createComment = async (
             throw new Error("new user posted too quickly");
         }
 
+        const thumbDets = await getThumbDets(comment);
+
         text = `UPDATE visitor SET updated = $1 WHERE token = $2`;
         await pool.query(text, [new Date().getTime(), token]);
 
@@ -141,12 +207,17 @@ export const createComment = async (
         text = `INSERT INTO comment (parent, name, posted, updated, comment, postid, original, flagged, visitorid)
             VALUES($1, $2, $3, $4, $5, $6, $7, $8, (
                 SELECT id AS visitorid FROM visitor WHERE token = $9
-            ))
+            )) RETURNING id
         `;
         const values = [parent, name, now, now, short, postid, original ?? "", false, token];
         result = await pool.query(text, values);
         if (result && result.rows) {
             const ret = result.rows[0];
+
+            if (thumbDets != null) {
+                text = `UPDATE comment SET thumbnail = $1, thumbTitle = $2 WHERE id = $3`
+                await pool.query(text, [thumbDets.imageUrl, thumbDets.title, ret.id]);
+            }
 
             if (parent != null) {
                 await updateParent(parent, now);
@@ -250,7 +321,7 @@ export async function checkIp(ip: string): Promise<number | null> {
     return null;
 }
 
-export async function checkToken(token: string, ip:string) {
+export async function checkToken(token: string, ip:string): Promise<number | null> {
     try {
         let text = "SELECT id FROM visitor WHERE token = $1";
         let result = await pool.query(text, [token]);
@@ -277,9 +348,13 @@ export async function checkToken(token: string, ip:string) {
             text = "INSERT INTO ip_visitor (visitorid, ipid) VALUES ($1, $2)";
             result = await pool.query(text, [visitorid, ipid]);
         }
+
+        return visitorid;
     } catch (error) {
         console.error(error);
     }
+
+    return null;
 }
 
 export interface IPAddress {

@@ -114,34 +114,72 @@ export async function filterString(input:string):Promise<string> {
     return ret;
 }
 
-const ipBlacklistFile = './ip-blacklist.txt';
-let ipBlacklist: string[] = []
-let ipFileSz = 0;
-function reloadIpBlacklist() {
-    try {
-        const stats = fs.statSync(ipBlacklistFile);
-        if (stats.size == ipFileSz) { return; }
+interface filters {
+    file: string,
+    list: string[],
+    sz: number
+}
 
-        const data = fs.readFileSync(ipBlacklistFile, { encoding: 'utf8' });
-        ipBlacklist = data.split('\n');
-        ipFileSz = stats.size
-        console.log("reloaded ip blacklist with " + ipBlacklist.length + " entries");
+const ipBlacklist: filters = {
+    file: './ip-blacklist.txt',
+    list: [],
+    sz: 0
+}
+
+const idBlacklist: filters = {
+    file: './greylist.txt',
+    list: [],
+    sz: 0
+}
+
+function reloadBlocklist(target: filters): boolean {
+    try {
+        const stats = fs.statSync(target.file);
+        if (stats.size == target.sz) { return false; }
+
+        const data = fs.readFileSync(target.file, { encoding: 'utf8' });
+        target.list = data.split('\n');
+        target.sz = stats.size;
+        return true;
     } catch (err) {
         console.error(err);
     }
+
+    return false;
 }
 
 export function isBlacklisted(ip: string): boolean {
-    reloadIpBlacklist();
+    const result = reloadBlocklist(ipBlacklist)
+    if (result) {
+        console.log("reloaded ip blocklist with " + ipBlacklist.list.length + " entries");
+    }
     const isIp4 = ip.startsWith("::ffff:");
     const ip4 = ip.substring(7);
 
-    for (let i = 0; i < ipBlacklist.length; i++) {
-        if (ipBlacklist[i].trim().length == 0) { continue; }
-        if (ipBlacklist[i].startsWith('#')) { continue; }
-        
-        if (!isIp4 && ip.startsWith(ipBlacklist[i])) { return true; }
-        else if (isIp4 && ip4.startsWith(ipBlacklist[i])) { return true; }
+    for (let i = 0; i < ipBlacklist.list.length; i++) {
+        if (ipBlacklist.list[i].trim().length == 0) { continue; }
+        if (ipBlacklist.list[i].startsWith('#')) { continue; }
+
+        if (!isIp4 && ip.startsWith(ipBlacklist.list[i])) { return true; }
+        else if (isIp4 && ip4.startsWith(ipBlacklist.list[i])) { return true; }
+    }
+
+    return false;
+}
+
+export function isGreylisted(id: number): boolean {
+    const result = reloadBlocklist(idBlacklist);
+    if (result) {
+        console.log("reloaded id blacklist with " + idBlacklist.list.length + " entries");
+    }
+
+    for (let i = 0; i < idBlacklist.list.length; i++) {
+        const filter = idBlacklist.list[i];
+        if (filter.trim().length == 0) { continue; }
+        if (filter.startsWith('#')) { continue; }
+
+        const num = Number.parseInt(filter);
+        if (id == num) { return true;}
     }
 
     return false;

@@ -199,13 +199,27 @@ const Comment:React.FC<CommentProps> = ({
         return (<img src={image} className="flaggedImage"/>)
     }
 
+    function openLink(comment: CommentEntry) {
+        if (comment.thumbLink != null) {
+            window.open(comment.thumbLink);
+        }
+    }
+
+    function renderVideoPreview(comment: CommentEntry): JSX.Element {
+        if (comment.flagged || (comment.thumbTitle == null && comment.thumbImg == null)) { return (<></>)}
+        return (<div className="preview" onClick={() => {openLink(comment)}}>
+            <div>{comment.thumbImg ? (<img src={comment.thumbImg} />) : (<></>)}</div>
+            <div style={{marginLeft: 10}}>{comment.thumbTitle}</div>
+        </div>)
+    }
+
     function renderMessageParts(message:string):JSX.Element[] {
         const ret:JSX.Element[] = [];
         const parts = findHyperlinks(message);
 
         for (let i = 0; i < parts.length; i++) {
-            if (i % 2 == 0) {
-                const parsed = parts[i].split("\n");
+            if (parts[i].match == null) {
+                const parsed = parts[i].str.split("\n");
                 for (let j = 0; j < parsed.length; j++) {
                     if (j > 0) {
                         ret.push((<br/>));
@@ -213,7 +227,11 @@ const Comment:React.FC<CommentProps> = ({
                     ret.push((<>{parsed[j]}</>));
                 }
             } else {
-                ret.push((<a target="_blank" rel="noopener noreferrer" href={parts[i]}>{parts[i]}</a>));
+                ret.push((
+                    <a target="_blank" rel="noopener noreferrer" href={parts[i].str}>
+                        {parts[i].match}
+                    </a>
+                ));
             }
         }
         return ret;
@@ -260,6 +278,7 @@ const Comment:React.FC<CommentProps> = ({
             </div>
             {link}
             {renderFlaggedContent(isFlagged)}
+            {renderVideoPreview(localComment)}
         </>)
     }
 
