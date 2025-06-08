@@ -115,10 +115,7 @@ interface previewData {
     url: string 
 }
 
-async function parseYouTube(str:string):Promise<previewData | null> {
-    const parts = str.split("=");
-    const id = parts[1];
-
+async function assembleYouTubeData(str: string, id: string):Promise<previewData | null> {
     const url = "https://www.googleapis.com/youtube/v3/videos" +
         "?key=" + env.googleKey +
         "&id=" + id +
@@ -137,11 +134,28 @@ async function parseYouTube(str:string):Promise<previewData | null> {
             url: str,
             title: title
         }
-    } catch(e) {
+    } catch (e) {
         console.log("failed to fetch " + url + " with " + e);
         return null;
     }
 }
+
+async function parseYouTube2(str:string):Promise<previewData | null> {
+    //https://youtu.be/AkFqg5wAuFk?si=8QI-3SmoRpoiTvUw
+    const parts = str.split("?");
+    const id = parts[0];
+    console.log("parts " + JSON.stringify(parts));
+    return await assembleYouTubeData(str, id);
+}
+
+async function parseYouTube1(str:string):Promise<previewData | null> {
+    //https://www.youtube.com/watch?v=CMWLX0KXwF4
+    const parts = str.split("=");
+    const id = parts[1];
+    return await assembleYouTubeData(str, id);
+}
+//https://www.googleapis.com/youtube/v3/videos?key=AIzaSyDk-_rhy0uO_iAKSJ_ZLtZCS4iTmboK7YM&id=8QI-3SmoRpoiTvUw&part=snippet
+//https://youtu.be/AkFqg5wAuFk?si=8QI-3SmoRpoiTvUw
 
 async function getThumbDets(msg: string): Promise<previewData | null> {
     var stringArr = msg.split(/(\s+)/);
@@ -154,7 +168,14 @@ async function getThumbDets(msg: string): Promise<previewData | null> {
 
         for (let j = 0; j < youtube.length; j++) {
             if (str.startsWith(youtube[j]), 7){
-                const ret = await parseYouTube(str);
+                const str2 = str.substring(8 + youtube[j].length);
+                let ret:previewData | null = null;
+                if (j == 0) {
+                    ret = await parseYouTube2(str2);
+                } else {
+                    ret = await parseYouTube1(str2);
+                }
+
                 if (ret == null) { return null; }
                 ret.start = msg.indexOf(ret.url);
                 return ret;
