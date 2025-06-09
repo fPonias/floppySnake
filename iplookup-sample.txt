@@ -1,0 +1,123 @@
+{
+    "ip": "138.199.50.134",
+    "type": "IPv4",
+    "hostname": "364392406.mia.cdn77.com",
+    "carrier": {
+        "name": null,
+        "mcc": null,
+        "mnc": null
+    },
+    "company": {
+        "domain": null,
+        "name": "CDNEXT-MIA",
+        "type": "business"
+    },
+    "connection": {
+        "asn": 212238,
+        "domain": "datacamp.co.uk",
+        "organization": "Datacamp Limited",
+        "route": "138.199.50.0/24",
+        "type": "hosting"
+    },
+    "currency": {
+        "code": "USD",
+        "name": "US Dollar",
+        "name_native": "US Dollar",
+        "plural": "US dollars",
+        "plural_native": "US dollars",
+        "symbol": "$",
+        "symbol_native": "$",
+        "format": {
+            "decimal_separator": ".",
+            "group_separator": ",",
+            "negative": {
+                "prefix": "-$",
+                "suffix": ""
+            },
+            "positive": {
+                "prefix": "$",
+                "suffix": ""
+            }
+        }
+    },
+    "location": {
+        "continent": {
+            "code": "NA",
+            "name": "North America"
+        },
+        "country": {
+            "area": 9629091,
+            "borders": [
+                "CA",
+                "MX"
+            ],
+            "calling_code": "1",
+            "capital": "Washington D.C.",
+            "code": "US",
+            "name": "United States",
+            "population": 334914895,
+            "population_density": 34.78,
+            "flag": {
+                "emoji": "🇺🇸",
+                "emoji_unicode": "U+1F1FA U+1F1F8",
+                "emojitwo": "https://cdn.ipregistry.co/flags/emojitwo/us.svg",
+                "noto": "https://cdn.ipregistry.co/flags/noto/us.png",
+                "twemoji": "https://cdn.ipregistry.co/flags/twemoji/us.svg",
+                "wikimedia": "https://cdn.ipregistry.co/flags/wikimedia/us.svg"
+            },
+            "languages": [
+                {
+                    "code": "en",
+                    "name": "English",
+                    "native": "English"
+                },
+                {
+                    "code": "es",
+                    "name": "Spanish",
+                    "native": "español"
+                },
+                {
+                    "code": "fr",
+                    "name": "French",
+                    "native": "français"
+                }
+            ],
+            "tld": ".us"
+        },
+        "region": {
+            "code": "US-FL",
+            "name": "Florida"
+        },
+        "city": "Miami",
+        "postal": "33299",
+        "latitude": 25.77417,
+        "longitude": -80.19362,
+        "language": {
+            "code": "en",
+            "name": "English",
+            "native": "English"
+        },
+        "in_eu": false
+    },
+    "security": {
+        "is_abuser": true,
+        "is_attacker": false,
+        "is_bogon": false,
+        "is_cloud_provider": true,
+        "is_proxy": false,
+        "is_relay": false,
+        "is_tor": false,
+        "is_tor_exit": false,
+        "is_vpn": true,
+        "is_anonymous": true,
+        "is_threat": true
+    },
+    "time_zone": {
+        "id": "America/New_York",
+        "abbreviation": "EST",
+        "current_time": "2025-06-09T11:26:55-04:00",
+        "name": "Eastern Standard Time",
+        "offset": -14400,
+        "in_daylight_saving": true
+    }
+}

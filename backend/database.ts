@@ -320,17 +320,15 @@ export async function createPost(url: string): Promise<number | null> {
 async function ipLookup(ipStr:string) {
     //https://api.ipregistry.co/209.51.14.206?key={apiKey}
 
-    let ipA = "::ffff:68.3.150.211"//ipStr;
+    let ipA = ipStr;
     if (ipA.indexOf("::ffff:") == 0) {
         ipA = ipA.substring(7);
     }
 
-    console.log("made it " + ipA);
     if (ipA == "::1" || ipA == "127.0.0.1" || ipA.indexOf("192.168") == 0) {
         return;
     }
 
-    console.log("made it4");
     const url = "https://api.ipregistry.co/" + ipA + 
         "?key=" + env.ipLookupKey;
 
