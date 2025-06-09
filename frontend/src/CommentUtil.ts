@@ -1,5 +1,5 @@
 const webWhitelist = [
-    {host: "youtu.be/", name: "youTube"},
+    { host: "youtu.be/", name: "youTube"},
     { host: "www.youtube.com/", name: "youTube"},
     { host: "youtube.com/", name: "youTube" },
     { host: "m.youtube.com/", name: "youTube" },
@@ -80,8 +80,7 @@ export function findHyperlinks(message:string):{str: string, match: string | nul
     } else {
         const first = message.substring(0, index + 8);
         const sub = findHyperlinks(message.substring(index + 8));
-        const next = sub.shift();
-        sub.unshift({str: first + next, match: null});
+        sub.unshift({str: first, match: null});
         return sub;
     }
 

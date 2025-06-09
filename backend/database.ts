@@ -128,6 +128,7 @@ async function assembleYouTubeData(str: string, id: string):Promise<previewData 
         const title = item.title;
         const thumb = item.thumbnails.default;
 
+        console.log("retrieved data for youtube video " + title);
         return {
             imageUrl: thumb.url,
             start: 0,
@@ -140,22 +141,21 @@ async function assembleYouTubeData(str: string, id: string):Promise<previewData 
     }
 }
 
-async function parseYouTube2(str:string):Promise<previewData | null> {
-    //https://youtu.be/AkFqg5wAuFk?si=8QI-3SmoRpoiTvUw
-    const parts = str.split("?");
-    const id = parts[0];
-    console.log("parts " + JSON.stringify(parts));
-    return await assembleYouTubeData(str, id);
+async function parseYouTube(str:string):Promise<previewData | null> {
+    if (str.indexOf("watch") > -1) {
+        //https://www.youtube.com/watch?v=CMWLX0KXwF4
+        const parts = str.split("=");
+        const id = parts[1];
+        return await assembleYouTubeData(str, id);
+    } else {
+        //https://www.youtube.com/shorts/naH-EbniNGc
+        //https://youtu.be/AkFqg5wAuFk?si=8QI-3SmoRpoiTvUw
+        const parts = str.split("?");
+        const pathParts = parts[0].split("/");
+        const id = pathParts[pathParts.length - 1];
+        return await assembleYouTubeData(str, id);
+    }
 }
-
-async function parseYouTube1(str:string):Promise<previewData | null> {
-    //https://www.youtube.com/watch?v=CMWLX0KXwF4
-    const parts = str.split("=");
-    const id = parts[1];
-    return await assembleYouTubeData(str, id);
-}
-//https://www.googleapis.com/youtube/v3/videos?key=AIzaSyDk-_rhy0uO_iAKSJ_ZLtZCS4iTmboK7YM&id=8QI-3SmoRpoiTvUw&part=snippet
-//https://youtu.be/AkFqg5wAuFk?si=8QI-3SmoRpoiTvUw
 
 async function getThumbDets(msg: string): Promise<previewData | null> {
     var stringArr = msg.split(/(\s+)/);
@@ -167,14 +167,10 @@ async function getThumbDets(msg: string): Promise<previewData | null> {
         }
 
         for (let j = 0; j < youtube.length; j++) {
-            if (str.startsWith(youtube[j]), 7){
+            if (str.indexOf(youtube[j]) == 8){
+                console.log("matched host " + youtube[j])
                 const str2 = str.substring(8 + youtube[j].length);
-                let ret:previewData | null = null;
-                if (j == 0) {
-                    ret = await parseYouTube2(str2);
-                } else {
-                    ret = await parseYouTube1(str2);
-                }
+                const ret:previewData | null = await parseYouTube(str2);
 
                 if (ret == null) { return null; }
                 ret.start = msg.indexOf(ret.url);
