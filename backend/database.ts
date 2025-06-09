@@ -341,15 +341,15 @@ async function ipLookup(ipStr:string) {
             asn = $1, domain = $2, org = $3, route = $4, type = $5, 
             countrycode = $6, country = $7, 
             city = $8, postal = $9, 
-            lat = $10, lon = $11
-            WHERE address = $12
+            lat = $10, lon = $11, state = $12
+            WHERE address = $13
         `;
         const connData = ipData.connection;
-        const locData = ipData.location
+        const locData = ipData.location;
         await pool.query(text, [
             connData.asn, connData.domain, connData.organization, connData.route, connData.type,
             locData.country.code, locData.country.name, 
-            locData.city, locData.postal, locData.latitude, locData.longitude,
+            locData.city, locData.postal, locData.latitude, locData.longitude, locData.region.name,
             ipStr
         ])
     } catch (e) {
