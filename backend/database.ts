@@ -317,19 +317,65 @@ export async function createPost(url: string): Promise<number | null> {
     return null;
 }
 
+async function ipLookup(ipStr:string) {
+    //https://api.ipregistry.co/209.51.14.206?key={apiKey}
+
+    let ipA = "::ffff:68.3.150.211"//ipStr;
+    if (ipA.indexOf("::ffff:") == 0) {
+        ipA = ipA.substring(7);
+    }
+
+    console.log("made it " + ipA);
+    if (ipA == "::1" || ipA == "127.0.0.1" || ipA.indexOf("192.168") == 0) {
+        return;
+    }
+
+    console.log("made it4");
+    const url = "https://api.ipregistry.co/" + ipA + 
+        "?key=" + env.ipLookupKey;
+
+    try {
+        console.log("updating ip entry location info with " + url);
+        const resp = await fetch(url);
+        const ipData = await resp.json();
+
+        const text = `UPDATE ip SET 
+            asn = $1, domain = $2, org = $3, route = $4, type = $5, 
+            countrycode = $6, country = $7, 
+            city = $8, postal = $9, 
+            lat = $10, lon = $11
+            WHERE address = $12
+        `;
+        const connData = ipData.connection;
+        const locData = ipData.location
+        await pool.query(text, [
+            connData.asn, connData.domain, connData.organization, connData.route, connData.type,
+            locData.country.code, locData.country.name, 
+            locData.city, locData.postal, locData.latitude, locData.longitude,
+            ipStr
+        ])
+    } catch (e) {
+        console.log("failed to fetch ip data wtih " + e.toString());
+    } 
+}
+
 export async function checkIp(ip: string): Promise<number | null> {
     try {
-        let text = "SELECT id FROM ip WHERE address = $1";
+        let text = "SELECT id, domain FROM ip WHERE address = $1";
         let result = await pool.query(text, [ip]);
 
         if (result.rows.length == 0) {
             console.log("new ip visit " + ip);
             text = "INSERT INTO ip (address, firstVisited) VALUES ($1, $2) RETURNING id";
             result = await pool.query(text, [ip, new Date().getTime()]);
+            await ipLookup(ip);
 
             return result.rows[0].id;
+        } else if (!result.rows[0].domain || result.rows[0].domain.length == 0) {
+            await ipLookup(ip);
+            return result.rows[0].id;
         } else {
-            return result.rows[0].id
+            return result.rows[0].id;
         }
     } catch (error) {
         console.error(error);
