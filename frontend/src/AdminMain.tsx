@@ -256,7 +256,10 @@ export const IPEntry: React.FC<IPEntryProps> = ({
     const lookupUrl = "https://iplocation.io/ip/" + stripped;
 
     return (<div key={Math.random()} className="ipBlockDiv">
-        <div style={{ marginRight: 10 }}><a target="_blank" rel="noopener noreferrer" href={lookupUrl}>{stripped}</a></div>
+        <div style={{ marginRight: 10 }}>
+            <div><a target="_blank" rel="noopener noreferrer" href={lookupUrl}>{stripped}</a></div>
+            <div>{ipData.domain} {ipData.countryCode} {ipData.state} {ipData.city}</div>
+        </div>
         <input type="checkbox" checked={ipData.blocked} onClick={() => {onBlocked(ipData.address)}} />
     </div>)
 }

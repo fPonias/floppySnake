@@ -2,6 +2,7 @@ import pkg from 'pg';
 import env2 from '../env';
 import { response } from 'express';
 import MyWebSocket from './websocket';
+import {GibberishInstance} from './Gibberish';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -30,6 +31,22 @@ export const getTopComments = async (postid: number): Promise<any[]> => {
     }
 }
 
+export const getTopGibberishComments = async (postid: number): Promise<any[]> => {
+    try {
+        const ret = await getTopComments(postid);
+        for (let row of ret) {
+            const gibberish = GibberishInstance.getComment(row.id);
+            row.name = gibberish.name;
+            row.comment = gibberish.message;
+            row.original = "";
+        }
+        return ret;
+    } catch (err) {
+        console.error(err);
+        throw new Error("Internal server error");
+    }
+}
+
 export const getRecentComments = async (postid: number, after: number):Promise<any[]> => {
     try {
         const res = await pool.query(`${commentQuery} WHERE updated >= $1 AND postid = $2 ORDER BY updated DESC LIMIT ${commentLimit}`, [after, postid]);
@@ -41,10 +58,43 @@ export const getRecentComments = async (postid: number, after: number):Promise<a
 };
 
 
+export const getRecentGibberishComments = async (postid: number, after: number):Promise<any[]> => {
+    try {
+        const ret = await getRecentComments(postid, after);
+        for (let row of ret) {
+            const gibberish = GibberishInstance.getComment(row.id);
+            row.name = gibberish.name;
+            row.comment = gibberish.message;
+            row.original = "";
+        }
+        return ret;
+    } catch(err) {
+        console.error(err);
+        throw new Error("Internal server error");
+    }
+};
+
 export const getOlderComments = async (postid: number, before: number): Promise<any[]> => {
     try {
         const res = await pool.query(`${commentQuery} WHERE updated < $1 AND postid = $2 ORDER BY updated DESC LIMIT ${commentLimit}`, [before, postid]);
         return res.rows;
+    } catch (err) {
+        console.error(err);
+        throw new Error("Internal server error");
+    }
+
+}
+
+export const getOlderGibberishComments = async (postid: number, before: number): Promise<any[]> => {
+    try {
+        const ret = await getOlderComments(postid, before);
+        for (let row of ret) {
+            const gibberish = GibberishInstance.getComment(row.id);
+            row.name = gibberish.name;
+            row.comment = gibberish.message;
+            row.original = "";
+        }
+        return ret;
     } catch (err) {
         console.error(err);
         throw new Error("Internal server error");
@@ -61,6 +111,21 @@ export const getComment = async (id:number): Promise<any> => {
         throw new Error("Internal server error");
     }
 }
+
+export const getCommentGibberish = async(id:number):Promise<any> => {
+    try {
+        const ret = await getComment(id);
+        const gibberish = GibberishInstance.getComment(ret.id);
+        ret.name = gibberish.name;
+        ret.comment = gibberish.message;
+        ret.original = "";
+        return ret;
+    } catch (err) {
+        console.error(err);
+        throw new Error("Internal server error");
+    }
+}
+
 export const flagComment = async(id:number):Promise<any> => {
     try {
         const now = new Date().getTime();
@@ -357,7 +422,24 @@ async function ipLookup(ipStr:string) {
     } 
 }
 
-export async function checkIp(ip: string): Promise<number | null> {
+async function updateIpBlock(ip: string):Promise<boolean> {
+    const related = await getRelatedUsersAndAddresses(ip)
+    const found = related.findIndex((row) => { return (row.iblocked || row.vblocked) })
+    if (found == -1 || found == undefined) { return false; }
+
+    const called = new Set<number>()
+    for (let i = 0; i < related.length; i++) {
+        if (!related[i].vblocked && !called.has(related[i].id)) {
+            console.log("auto blocked user " + related[i].id + " for " + ip);
+            blockUser(related[i].id, true);
+            called.add(related[i].id);
+        }
+    }
+}
+
+export async function checkIp(ip: string): Promise<{id: number, blocked: boolean} | null> {
+    const blocked = await updateIpBlock(ip);
+
     try {
         let text = "SELECT id, domain FROM ip WHERE address = $1";
         let result = await pool.query(text, [ip]);
@@ -399,7 +481,8 @@ export async function checkToken(token: string, ip:string): Promise<number | nul
             await pool.query(text, [new Date().getTime(), visitorid]);
         }
 
-        const ipid = await checkIp(ip);
+        const {id, blocked} = await checkIp(ip);
+        const ipid = id;
         
         text = "SELECT visitorid, ipid FROM ip_visitor WHERE visitorid = $1 and ipid = $2";
         result = await pool.query(text, [visitorid, ipid]);
@@ -421,6 +504,10 @@ export async function checkToken(token: string, ip:string): Promise<number | nul
 export interface IPAddress {
     address: string,
     blocked: boolean,
+    domain: string,
+    countryCode: string,
+    city: string,
+    state: string,
 }
 
 export interface UserData {
@@ -485,7 +572,11 @@ export async function getUserData(): Promise<UserData[]> {
         const item = ret[idx];
         item.ipAddresses.push({
             address: addressObj.address, 
-            blocked: addressObj.blocked
+            blocked: addressObj.blocked,
+            domain: addressObj.domain,
+            countryCode: addressObj.countryCode,
+            city: addressObj.city,
+            state: addressObj.state,
         });
     }
 
@@ -504,11 +595,78 @@ export async function getUserNames(): Promise<{name: string, visitorid: number}[
     return result.rows;
 }
 
-export async function getUserAddresses(): Promise<{ address: string, posted: number | null, firstvisited: number, id: number, blocked: boolean }[]> {
-    const text = `SELECT v.id, c.posted, i.firstvisited, i.address, i.blocked FROM visitor v
+interface UserAddress {
+    address: string, 
+    posted: number | null, 
+    firstvisited: number, 
+    id: number, 
+    blocked: boolean,
+    domain:string, 
+    countryCode: string, 
+    city: string, 
+    state: string,
+}
+
+export async function isUserBlacklisted(token:string):Promise<boolean> {
+    const related = await getRelatedUsersAndAddressesByToken(token);
+    for (let i = 0; i < related.length; i++) {
+        if (related[i].vblocked || related[i].iblocked) {
+            console.log("user " + token + " matched blacklist " + JSON.stringify(related[i]))
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export async function getRelatedUsersAndAddressesByToken(token:string):Promise<any[]> {
+    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked,
+		ip.firstvisited, ip.address, ip."state", 
+		ip.city, ip.country, ip.blocked iblocked
+	FROM visitor 
+	JOIN (
+		SELECT iv.* FROM ip_visitor iv JOIN (
+			SELECT DISTINCT(iv.ipid) FROM ip_visitor iv JOIN (
+				SELECT iv.visitorid FROM ip_visitor iv
+				JOIN visitor v ON v.id = iv.visitorid
+					WHERE v.token = $1
+			) v ON v.visitorid = iv.visitorid
+		) i ON i.ipid = iv.ipid		
+	) v ON v.visitorid = visitor.id
+	JOIN ip ON v.ipid = ip.id
+    `;
+
+    const result = await pool.query(text, [token]);
+    return result.rows;
+}
+
+export async function getRelatedUsersAndAddresses(ip:string):Promise<any[]> {
+    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked, 
+    	ip.firstvisited, ip.address, ip."state", 
+    	ip.city, ip.country, ip.blocked iblocked
+    FROM visitor 
+    JOIN (
+    	SELECT iv.* FROM ip_visitor iv JOIN (
+    		SELECT DISTINCT(iv.ipid) FROM ip_visitor iv JOIN (
+    			SELECT iv.visitorid FROM ip_visitor iv
+    			JOIN ip ON ip.id = iv.ipid
+    				WHERE ip.address = $1
+    		) v ON v.visitorid = iv.visitorid
+    	) i ON i.ipid = iv.ipid
+    ) iv ON iv.visitorid = visitor.id
+    JOIN ip ON ip.id = iv.ipid
+    `;
+
+    const result = await pool.query(text, [ip]);
+    return result.rows;
+}
+
+export async function getUserAddresses(): Promise<UserAddress[]> {
+    const text = `SELECT v.id, c.posted, i.firstvisited, i.address, i.blocked, i.domain, i.countryCode, i.city, i.state
+            FROM visitor v
             LEFT OUTER JOIN (SELECT MAX(posted) posted, visitorid FROM comment GROUP BY visitorid) c ON v.id = c.visitorid
             JOIN ip_visitor iv ON iv.visitorid = v.id
-            JOIN ip i ON i.id = iv.ipid
+            JOIN (SELECT id, firstvisited, address, blocked, domain, countryCode, city, state FROM ip) i ON i.id = iv.ipid
     		order by v.id, c.posted, i.firstvisited
     `
 
@@ -620,7 +778,7 @@ export async function blockUser(id: number, blocked: boolean) {
         const now = new Date().getTime();
         await pool.query(text, [now, id]);
     } catch (e) {
-        console.log("failed to block user " + id)
+        console.log("failed to block user " + id + " with " + e)
     }
 }
 

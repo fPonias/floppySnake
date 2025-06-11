@@ -14,8 +14,12 @@ import { resetKey } from './adminKey';
 import cookieParser from 'cookie-parser';
 import { checkIp } from './database';
 import { isBlacklisted } from './filter';
+import {GibberishInstance} from './Gibberish';
 
 const env = (env2.default) ? env2.default : env2;
+
+const gibberish = GibberishInstance;
+gibberish.load();
 
 const app = express()
 const expressWs = ws(app);
@@ -48,15 +52,8 @@ app.use(morgan('common', { stream: accessLogStream }));
 
 const ipSaver = async function (req, res, next) {
     await checkIp(req.ip);
-    if (isBlacklisted(req.ip)) {
-        console.log("banned user " + req.ip + " requested " + req.url);
-        res.status(404).send("Banned");
-        return;
-    }
-
     next();
 }
-
 
 app.use(ipSaver);
 

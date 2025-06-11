@@ -148,38 +148,26 @@ function reloadBlocklist(target: filters): boolean {
     return false;
 }
 
-export function isBlacklisted(ip: string): boolean {
+export async function isBlacklisted(ip: string):Promise<boolean> {
     const result = reloadBlocklist(ipBlacklist)
     if (result) {
         console.log("reloaded ip blocklist with " + ipBlacklist.list.length + " entries");
     }
-    const isIp4 = ip.startsWith("::ffff:");
+    const isIp4 = ip.indexOf("::ffff:") == 0;
     const ip4 = ip.substring(7);
 
     for (let i = 0; i < ipBlacklist.list.length; i++) {
         if (ipBlacklist.list[i].trim().length == 0) { continue; }
         if (ipBlacklist.list[i].startsWith('#')) { continue; }
 
-        if (!isIp4 && ip.startsWith(ipBlacklist.list[i])) { return true; }
-        else if (isIp4 && ip4.startsWith(ipBlacklist.list[i])) { return true; }
-    }
-
-    return false;
-}
-
-export function isGreylisted(id: number): boolean {
-    const result = reloadBlocklist(idBlacklist);
-    if (result) {
-        console.log("reloaded id blacklist with " + idBlacklist.list.length + " entries");
-    }
-
-    for (let i = 0; i < idBlacklist.list.length; i++) {
-        const filter = idBlacklist.list[i];
-        if (filter.trim().length == 0) { continue; }
-        if (filter.startsWith('#')) { continue; }
-
-        const num = Number.parseInt(filter);
-        if (id == num) { return true;}
+        if (!isIp4 && ip.startsWith(ipBlacklist.list[i])) { 
+            console.log("ip " + ip + " matches blacklist entry " + ipBlacklist.list[i]);
+            return true; 
+        }
+        else if (isIp4 && ip4.startsWith(ipBlacklist.list[i])) { 
+            console.log("ip " + ip4 + " matches blacklist entry " + ipBlacklist.list[i]);
+            return true; 
+        }
     }
 
     return false;

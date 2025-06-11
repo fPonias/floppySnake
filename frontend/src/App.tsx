@@ -124,6 +124,11 @@ function App() {
             } else if (data.action == "token") {
                 setCookie("apiToken", data.token);
                 appContext.apiToken = data.token;
+
+                const commentBack = appContext.commentBackend;
+                if (!commentBack) { return; }
+                commentBack.apiToken = data.token;
+
                 appContext.g = data.g;
                 firstLoad();
 
@@ -197,6 +202,9 @@ function App() {
 
                 if (!commentBack) { return; }
                 forceUpdate(date).then(() => {});
+            } else if (data.action == "refresh") {
+                appContext.commentBackend?.reset();
+                this.firstLoad();
             }
         },
     });
@@ -303,17 +311,6 @@ function App() {
 
         setComments(appContext.commentBackend?.tree ?? []);
         setLoading(false);
-
-        async function delayed() 
-        {
-            if (appContext.g) {
-                troll.current.doWork();
-            }
-        }
-
-        setTimeout(() => {
-            delayed();
-        }, 5000);
     }
 
     async function doUpdate() {

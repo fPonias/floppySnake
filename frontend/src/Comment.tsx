@@ -291,9 +291,9 @@ const Comment:React.FC<CommentProps> = ({
 
 
     let commentClass = "comment";
-    if (localComment.blocked) {
-        commentClass += " blocked";
-    }
+    //if (localComment.blocked) {
+    //    commentClass += " blocked";
+    //}
 
     return (<>
         <div className={commentClass} key={"comment-" + localComment.id} id={localComment.id.toString()} style={{ marginLeft: indent + "px" }}>

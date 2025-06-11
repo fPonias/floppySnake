@@ -63,9 +63,19 @@ export class CommentEntries {
     url: string = "";
     postid: number = 0;
     adminToken: string | null = null;
+    apiToken: string | null = null;
 
     constructor(url: string) {
         this.url = url;
+    }
+
+    reset() {
+        this.newest = 0;
+        this.map = new Map<number, CommentEntry>()
+        this.tree = [];
+        this.count = 0;
+        this.oldest = Number.MAX_VALUE;
+        this.oldestLoaded = Number.MAX_VALUE;
     }
 
     private async parseComments(data: Response): Promise<CommentEntry[]> {
@@ -107,7 +117,7 @@ export class CommentEntries {
             }
 
             if (!this.map.has(comment.parent)) {
-                const url = env.api + "/comment/" + comment.parent;
+                const url = env.api + "/comment/" + comment.parent + "/" + this.apiToken;
                 const res = await fetch(url);
                 const parent = await this.parseComment(res);
 
@@ -142,19 +152,23 @@ export class CommentEntries {
     }
 
     async getRecent() {
-        return this.getComments(env.api + "/comments/" + this.postid);
+        if (!this.apiToken) { return []}
+        return this.getComments(env.api + "/comments/" + this.postid + "/all/" + this.apiToken);
     }
 
     async getFrom(from: number) {
-        return this.getComments(env.api + "/comments/" + this.postid + "/after/" + from);
+        if (!this.apiToken) { return []}
+        return this.getComments(env.api + "/comments/" + this.postid + "/after/" + from + "/" + this.apiToken);
     }
 
     async getNewest() {
-        return this.getComments(env.api + "/comments/" + this.postid + "/after/" + this.newest);
+        if (!this.apiToken) { return []}
+        return this.getComments(env.api + "/comments/" + this.postid + "/after/" + this.newest + "/" + this.apiToken);
     }
 
     async getOlder() {
-        return this.getComments(env.api + "/comments/" + this.postid + "/before/" + this.oldestLoaded);
+        if (!this.apiToken) { return []}
+        return this.getComments(env.api + "/comments/" + this.postid + "/before/" + this.oldestLoaded + "/" + this.apiToken);
     }
 
     async updateComment(id:number) {

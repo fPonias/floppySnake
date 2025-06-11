@@ -2,12 +2,16 @@ import path from 'path';
 import fs from 'fs';
 import {
     getRecentComments,
+    getRecentGibberishComments,
     createComment,
     getComment,
+    getCommentGibberish,
     deleteComment,
     getCommentCount,
     getOlderComments,
+    getOlderGibberishComments,
     getTopComments,
+    getTopGibberishComments,
     getPost,
     createPost,
     flagComment,
@@ -19,12 +23,13 @@ import {
     updateFilter,
     deleteFilter,
     blockUser,
-    blockIP
+    blockIP,
+    isUserBlacklisted,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
 import { authorize, isAuthorized } from './adminKey';
-import { filterString } from './filter';
+import { filterString, isBlacklisted } from './filter';
 
 const env = (env2.default) ? env2.default : env2;
 let allowPosts = true;
@@ -152,27 +157,49 @@ sectigo.com
         findFirst(".css", res)
     })
 
-    app.get('/comments/:postid', (req, res) => {
-        console.log("get comments called with " + JSON.stringify(req.body));
-        getTopComments(req.params.postid)
-            .then(response => {
-                res.status(200).send(response);
-            })
-            .catch(error => {
-                res.status(500).send(error);
-            })
+    app.get('/comments/:postid/all/:token', (req, res) => {
+        console.log("get comments called with " + JSON.stringify(req.params));
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+            console.log("blacklisted get comments called with " + JSON.stringify(req.params));
+            getTopGibberishComments(req.params.postid)
+                .then(response => {
+                    res.status(200).send(response);
+                })
+                .catch(error => {
+                    res.status(500).send(error);
+                })
+        } else {
+            getTopComments(req.params.postid)
+                .then(response => {
+                    res.status(200).send(response);
+                })
+                .catch(error => {
+                    res.status(500).send(error);
+                })
+        }});
     })
 
-    app.get('/comments/:postid/before/:before', (req, res) => {
-        console.log("get comment before called with " + JSON.stringify(req.params));
-        getOlderComments(req.params.postid, req.params.before)
-            .then(response => {
-                res.status(200).send(response);
-            })
-            .catch(error => {
-                res.status(500).send(error);
-            })
-    })
+    app.get('/comments/:postid/before/:before/:token', (req, res) => {
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+            console.log("blacklisted get comment before called with " + JSON.stringify(req.params));
+            getOlderGibberishComments(req.params.postid)
+                .then(response => {
+                    res.status(200).send(response);
+                })
+                .catch(error => {
+                    res.status(500).send(error);
+                })
+        } else {
+            console.log("get comment before called with " + JSON.stringify(req.params));
+            getOlderComments(req.params.postid, req.params.before)
+                .then(response => {
+                    res.status(200).send(response);
+                })
+                .catch(error => {
+                    res.status(500).send(error);
+                })
+        }});
+    });
 
     app.get('/comments/:postid/count', (req, res) => {
         console.log("get comment count called");
@@ -185,26 +212,48 @@ sectigo.com
             })
     })
 
-    app.get('/comments/:postid/after/:after', (req, res) => {
-        console.log("get comment after called with " + JSON.stringify(req.params));
-        getRecentComments(req.params.postid, req.params.after)
-            .then(response => {
-                res.status(200).send(response);
-            })
-            .catch(error => {
-                res.status(500).send(error);
-            })
+    app.get('/comments/:postid/after/:after/:token', (req, res) => {
+           console.log("get comment after called with " + JSON.stringify(req.params));
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+            console.log("blacklisted get comment after called with " + JSON.stringify(req.params));
+            getRecentGibberishComments(req.params.postid, req.params.after)
+                .then(response => {
+                    res.status(200).send(response);
+                })
+                .catch(error => {
+                    res.status(500).send(error);
+                })
+        } else {
+            getRecentComments(req.params.postid, req.params.after)
+                .then(response => {
+                    res.status(200).send(response);
+                })
+                .catch(error => {
+                    res.status(500).send(error);
+                })
+        }});
     })
 
-    app.get('/comment/:id', (req, res) => {
-        console.log("get comment called with " + JSON.stringify(req.params));
-        getComment(req.params.id)
-            .then(response => {
-                res.status(200).send(response);
-            })
-            .catch(error => {
-                res.status(500).send(error);
-            })
+    app.get('/comment/:id/:token', (req, res) => {
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+            console.log("blacklisted get comment called with " + JSON.stringify(req.params));
+            getCommentGibberish(req.params.id)
+                .then(response => {
+                    res.status(200).send(response);
+                })
+                .catch(error => {
+                    res.status(500).send(error);
+                })
+        } else {
+            console.log("get comment called with " + JSON.stringify(req.params));
+            getComment(req.params.id)
+                .then(response => {
+                    res.status(200).send(response);
+                })
+                .catch(error => {
+                    res.status(500).send(error);
+                })
+        }});
     });
 
     app.get('/comment/flag/:id{/:token}', (req, res) => {

@@ -4,7 +4,7 @@ import { v4 } from "uuid";
 import url from "url";
 import { checkToken, UserData } from './database';
 import { authorize, getGrants, isAuthorized } from './adminKey';
-import { isBlacklisted, isGreylisted } from './filter';
+import { isBlacklisted } from './filter';
 
 const env = (env2.default) ? env2.default : env2;
 
@@ -14,7 +14,7 @@ interface connectionData {
     token: string | undefined,
     ip: string,
     isAdmin: boolean,
-    isGreylisted: boolean,
+    isBlacklisted: boolean,
 }
 
 export default class MyWebSocket {
@@ -40,11 +40,6 @@ export default class MyWebSocket {
 
     private onConnected(connection, request) {
         const ip = request.socket.remoteAddress;
-        
-        if (isBlacklisted(ip)) {
-            console.log("banned websocket opened from " + ip);
-            return;
-        }
 
         const connData:connectionData = {
             connection: connection,
@@ -52,7 +47,7 @@ export default class MyWebSocket {
             ip: request.socket.remoteAddress,
             token: undefined,
             isAdmin: false,
-             isGreylisted: false,
+            isBlacklisted: false,
         };
         console.log("connection " + connData.id + " opened");
         this.connections.set(connData.id, connData);
@@ -72,7 +67,7 @@ export default class MyWebSocket {
 
     connectionsNextId = 1;
     connections = new Map<number, connectionData>();
-    tokenIndex = new Set<string>();
+    tokenIndex = new Map<string, connectionData>();
 
     private handleClose(connData:connectionData) {
         console.log(`${connData.id} disconnected`);
@@ -113,6 +108,13 @@ export default class MyWebSocket {
         this.sendAdminBroadcast(message);
     }
 
+    sendMessage(token: string, message:string) {
+        const conn = this.tokenIndex.get(token);
+        if (!conn) { return; }
+
+        conn.connection.send(message);
+    }
+
     sendBroadcast(message:string) {
         const keys = this.connections.keys();
         for (let id of keys) {
@@ -150,20 +152,20 @@ export default class MyWebSocket {
                 console.log("creating new api token " + token)
             }
 
-            checkToken(token, connData.ip).then((visitorid) => {
+            checkToken(token, connData.ip).then(async (visitorid) => {
                 connData.token = token;
-                this.tokenIndex.add(token);
+                this.tokenIndex.set(token, connData);
 
                 if (visitorid != null) {
-                    connData.isGreylisted = isGreylisted(visitorid)
-                    if (connData.isGreylisted) {
-                        console.log("greylisted visitor " + visitorid + " logged in");
+                    connData.isBlacklisted = await isBlacklisted(connData.ip)
+                    if (connData.isBlacklisted) {
+                        console.log("blacklisted visitor " + visitorid + " logged in");
                     } else {
                         console.log("visitor " + visitorid + " logged in");
                     }
                 }
 
-                const message = JSON.stringify({ action: "token", token: token, g: connData.isGreylisted });
+                const message = JSON.stringify({ action: "token", token: token, g: connData.isBlacklisted });
                 connection.send(message);
 
                 this.sendAdminBroadcast(JSON.stringify({ action: "login", token: token }));

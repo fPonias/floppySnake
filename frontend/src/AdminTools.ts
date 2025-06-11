@@ -3,6 +3,10 @@ import env from "../../env"
 export interface IPAddress {
     address: string, 
     blocked: boolean,
+    domain: string,
+    countryCode: string,
+    city: string, 
+    state: string
 }
 
 export interface UserData {
