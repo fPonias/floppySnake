@@ -263,12 +263,13 @@ export const createComment = async (
 
         const now = new Date().getTime();
 
-        let text = `SELECT updated, created FROM visitor WHERE visitor.token=$1`;
+        let text = `SELECT updated, created, blocked FROM visitor WHERE visitor.token=$1`;
         let result = await pool.query(text, [token]);
         if (result.rows.length == 0) {
             throw new Error("invalid user posted");
         }
         
+        const blocked = result.rows[0].blocked;
         let diff = now - result.rows[0].updated;
         if (diff < 1000) {
             throw new Error("comment posted too quickly");
@@ -299,6 +300,12 @@ export const createComment = async (
             if (thumbDets != null) {
                 text = `UPDATE comment SET thumbnail = $1, thumbTitle = $2 WHERE id = $3`
                 await pool.query(text, [thumbDets.imageUrl, thumbDets.title, ret.id]);
+            }
+
+            if (blocked) {
+                const gib = GibberishInstance.getComment(ret.id);
+                text = `UPDATE comment SET name = $1, comment = $2 WHERE id = $3`
+                await pool.query(text, [gib.name, gib.message, ret.id]);
             }
 
             if (parent != null) {
@@ -427,17 +434,21 @@ async function updateIpBlock(ip: string):Promise<boolean> {
     const found = related.findIndex((row) => { return (row.iblocked || row.vblocked) })
     if (found == -1 || found == undefined) { return false; }
 
+    let ret = false;
     const called = new Set<number>()
     for (let i = 0; i < related.length; i++) {
         if (!related[i].vblocked && !called.has(related[i].id)) {
             console.log("auto blocked user " + related[i].id + " for " + ip);
             blockUser(related[i].id, true);
             called.add(related[i].id);
+            ret = true;
         }
     }
+
+    return true;
 }
 
-export async function checkIp(ip: string): Promise<{id: number, blocked: boolean} | null> {
+export async function checkIp(ip: string): Promise<number | null> {
     const blocked = await updateIpBlock(ip);
 
     try {

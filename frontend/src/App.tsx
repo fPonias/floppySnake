@@ -97,6 +97,11 @@ function App() {
             }
         },
         shouldReconnect: (_) => true,
+        onClose: () => {
+            appContext.commentBackend?.reset();
+            setComments(appContext.commentBackend?.tree ?? []);
+            setLoading(true);
+        },
         share: true,
         onMessage: (evt) => {
             console.log("received message " + JSON.stringify(evt.data));

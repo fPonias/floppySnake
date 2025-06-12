@@ -83,14 +83,11 @@ export class Gibberish {
         console.log("generating message max length " + length);
         while (currentWord && count < length) {
             rand = Math.floor(Math.random() * currentWord.nextCount);
-            let keys = currentWord.next.keys().toArray();
-            let next = currentWord.next.get(keys[0]);
-            for (let k = 1; k < keys.length; k++) {
-                let key = keys[k];
-                if (!next) { break; }
+            let next: string | null = null;
+            for (let key of currentWord.next.keys()) {
+                next = currentWord.next.get(key);
                 rand = rand - next.frequency;
                 if (rand <= 0) {break}
-                next = currentWord.next.get(key);
             }
 
             if (!next) { break; }
