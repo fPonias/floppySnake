@@ -13,7 +13,6 @@ import EventEmitter from "reactjs-eventemitter";
 import { AdminTools } from './AdminTools';
 import { AdminPanel } from './Admin';
 import VisitorEntries from './VisitorEntry';
-import { T } from './Troll';
 
 interface ActiveReplyData {
     name: string,
@@ -209,7 +208,7 @@ function App() {
                 forceUpdate(date).then(() => {});
             } else if (data.action == "refresh") {
                 appContext.commentBackend?.reset();
-                this.firstLoad();
+                firstLoad();
             }
         },
     });
@@ -301,8 +300,6 @@ function App() {
             removeCookie("token");
         }
     }
-
-    const troll = useRef(new T());
 
     async function firstLoad() {
         const allow = await appContext.commentBackend?.getAllowPosts();
