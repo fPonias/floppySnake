@@ -489,7 +489,7 @@ export async function checkToken(token: string, ip:string): Promise<number | nul
             await pool.query(text, [new Date().getTime(), visitorid]);
         }
 
-        const {id, blocked} = await checkIp(ip);
+        const id = await checkIp(ip);
         const ipid = id;
         
         text = "SELECT visitorid, ipid FROM ip_visitor WHERE visitorid = $1 and ipid = $2";
