@@ -19,7 +19,7 @@ const commentQuery = `
     ) b ON b.id = comment.visitorid
 `
 
-const commentLimit = 300
+const commentLimit = 100
 
 export const getTopComments = async (postid: number): Promise<any[]> => {
     try {
@@ -625,6 +625,27 @@ export async function isUserBlacklisted(token:string):Promise<boolean> {
     }
 
     return false;
+}
+
+export async function getRelatedUsersAndAddressesById(id:string):Promise<any[]> {
+    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked,
+		ip.firstvisited, ip.address, ip."state", 
+		ip.city, ip.country, ip.blocked iblocked
+	FROM visitor 
+	JOIN (
+		SELECT iv.* FROM ip_visitor iv JOIN (
+			SELECT DISTINCT(iv.ipid) FROM ip_visitor iv JOIN (
+				SELECT iv.visitorid FROM ip_visitor iv
+				JOIN visitor v ON v.id = iv.visitorid
+					WHERE v.id = $1
+			) v ON v.visitorid = iv.visitorid
+		) i ON i.ipid = iv.ipid		
+	) v ON v.visitorid = visitor.id
+	JOIN ip ON v.ipid = ip.id
+    `;
+
+    const result = await pool.query(text, [id]);
+    return result.rows;
 }
 
 export async function getRelatedUsersAndAddressesByToken(token:string):Promise<any[]> {

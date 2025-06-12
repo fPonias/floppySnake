@@ -587,7 +587,7 @@ sectigo.com
         const json = req.body;
         console.log("block user called for " + JSON.stringify(json));
         await blockUser(json.id, json.blocked);
-        const related = await getRelatedUsersAndAddressesByToken(json.id);
+        const related = await getRelatedUsersAndAddressesById(json.id);
         console.log("found " + related.length + " related user entries");
 
         const called = new Set<number>()
