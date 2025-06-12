@@ -12,18 +12,13 @@ const pool = new Pool(env.dbArgs);
 
 const commentQuery = `
     SELECT comment.*, b.blocked FROM comment
-    LEFT OUTER JOIN (
-    	SELECT ip.blocked OR visitor.blocked AS blocked, visitor.id FROM ip_visitor iv
-    		LEFT OUTER JOIN ip ON ip.id = iv.ipid
-    		LEFT OUTER JOIN visitor ON visitor.id = iv.visitorid
-    ) b ON b.id = comment.visitorid
 `
 
 const commentLimit = 100
 
 export const getTopComments = async (postid: number): Promise<any[]> => {
     try {
-        const res = await pool.query(`${commentQuery} WHERE postid = $1 ORDER BY updated DESC LIMIT ${commentLimit}`, [postid]);
+        const res = await pool.query(`${commentQuery} WHERE postid = $1 ORDER BY id DESC LIMIT ${commentLimit}`, [postid]);
         return res.rows;
     } catch (err) {
         console.error(err);
