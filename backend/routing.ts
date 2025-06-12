@@ -593,10 +593,7 @@ sectigo.com
         const called = new Set<number>()
         for (let i = 0; i < related.length; i++) {
             if (!related[i].vblocked && !called.has(related[i].id)) {
-                console.log("user " + related[i].id + " for " + ip + " set to " + json.blocked);
-                await blockUser(related[i].id, json.blocked);
                 called.add(related[i].id);
-
                 MyWebSocket.instance.sendMessage(related[i].token, JSON.stringify({action: "refresh"}));
             }
         }
@@ -624,10 +621,7 @@ sectigo.com
         const called = new Set<number>()
         for (let i = 0; i < related.length; i++) {
             if (!related[i].vblocked && !called.has(related[i].id)) {
-                console.log("user " + related[i].id + " for " + ip + " set to " + json.blocked);
-                await blockUser(related[i].id, json.blocked);
                 called.add(related[i].id);
-
                 MyWebSocket.instance.sendMessage(related[i].token, JSON.stringify({action: "refresh"}));
             }
         }

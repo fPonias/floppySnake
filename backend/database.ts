@@ -302,11 +302,11 @@ export const createComment = async (
                 await pool.query(text, [thumbDets.imageUrl, thumbDets.title, ret.id]);
             }
 
-            if (blocked) {
-                const gib = GibberishInstance.getComment(ret.id);
-                text = `UPDATE comment SET name = $1, comment = $2 WHERE id = $3`
-                await pool.query(text, [gib.name, gib.message, ret.id]);
-            }
+            //if (blocked) {
+            //    const gib = GibberishInstance.getComment(ret.id);
+            //    text = `UPDATE comment SET name = $1, comment = $2 WHERE id = $3`
+            //    await pool.query(text, [gib.name, gib.message, ret.id]);
+            //}
 
             if (parent != null) {
                 await updateParent(parent, now);
@@ -438,9 +438,6 @@ async function updateIpBlock(ip: string):Promise<boolean> {
     const called = new Set<number>()
     for (let i = 0; i < related.length; i++) {
         if (!related[i].vblocked && !called.has(related[i].id)) {
-            console.log("auto blocked user " + related[i].id + " for " + ip);
-            blockUser(related[i].id, true);
-            called.add(related[i].id);
             ret = true;
         }
     }
