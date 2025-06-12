@@ -25,6 +25,8 @@ import {
     blockUser,
     blockIP,
     isUserBlacklisted,
+    getRelatedUsersAndAddressesByToken,
+    getRelatedUsersAndAddresses,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -573,8 +575,7 @@ sectigo.com
         })
     })
 
-    app.post("/blockUser{/:token}", (req, res) => {
-        console.log("block user called");
+    app.post("/blockUser{/:token}", async (req, res) => {
 
         if (!isAuthorized(req)) {
             console.log("auth failed");
@@ -584,18 +585,30 @@ sectigo.com
 
         const now = new Date().getTime();
         const json = req.body;
-        blockUser(json.id, json.blocked).then(() => {
-            res.status(200).send("success");
-            MyWebSocket.instance.broadcastBlocked(now);
-        }).catch(err => {
-            console.log("block user failed with " + err);
-            res.status(500).send("nope");
-            return;
-        })
+        console.log("block user called for " + JSON.stringify(json));
+        await blockUser(json.id, json.blocked);
+        const related = await getRelatedUsersAndAddressesByToken(json.id);
+        console.log("found " + related.length + " related user entries");
+
+        const called = new Set<number>()
+        for (let i = 0; i < related.length; i++) {
+            if (!related[i].vblocked && !called.has(related[i].id)) {
+                console.log("user " + related[i].id + " for " + ip + " set to " + json.blocked);
+                await blockUser(related[i].id, json.blocked);
+                called.add(related[i].id);
+
+                MyWebSocket.instance.sendMessage(related[i].token, JSON.stringify({action: "refresh"}));
+            }
+        }
+
+        console.log("sending block broadcast");;
+
+        res.status(200).send("success");
+        MyWebSocket.instance.broadcastBlocked(now);
     })
 
-    app.post("/blockIP{/:token}", (req, res) => {
-        console.log("block user called");
+    app.post("/blockIP{/:token}", async (req, res) => {
+        console.log("block ip called");
 
         if (!isAuthorized(req)) {
             console.log("auth failed");
@@ -605,13 +618,21 @@ sectigo.com
 
         const now = new Date().getTime();
         const json = req.body;
-        blockIP(json.address, json.blocked).then(() => {
-            res.status(200).send("success");
-            MyWebSocket.instance.broadcastBlocked(now);
-        }).catch(err => {
-            console.log("block user failed with " + err);
-            res.status(500).send("nope");
-            return;
-        })
+        const related = await getRelatedUsersAndAddresses(json.address)
+        await blockIP(json.address, json.blocked)
+
+        const called = new Set<number>()
+        for (let i = 0; i < related.length; i++) {
+            if (!related[i].vblocked && !called.has(related[i].id)) {
+                console.log("user " + related[i].id + " for " + ip + " set to " + json.blocked);
+                await blockUser(related[i].id, json.blocked);
+                called.add(related[i].id);
+
+                MyWebSocket.instance.sendMessage(related[i].token, JSON.stringify({action: "refresh"}));
+            }
+        }
+
+        res.status(200).send("success");
+        MyWebSocket.instance.broadcastBlocked(now);
     })
 }
