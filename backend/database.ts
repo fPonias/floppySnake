@@ -11,7 +11,7 @@ const { Pool } = pkg;
 const pool = new Pool(env.dbArgs);
 
 const commentQuery = `
-    SELECT comment.*, b.blocked FROM comment
+    SELECT comment.* FROM comment
 `
 
 const commentLimit = 100
@@ -522,9 +522,117 @@ export interface UserData {
     alias: string,
     updated: number,
     ipAddresses: IPAddress[],
+    users: SubUserData[],
     names: string[],
     isActive: boolean,
+}
+
+export interface SubUserData {
+    visitorid: number,
+    token: string,
+    updated: number,
     blocked: boolean,
+    created: number | null
+}
+
+export async function getRecentUserData(start: number): Promise<UserData[]> {
+    let text = `SELECT * FROM visitor 
+        WHERE updated >= $1
+        ORDER BY updated DESC
+    `;
+    let result = await pool.query(text, [start]);
+
+    const userList:UserData[] = [];
+    const ids:number[] = [];
+    const userMap:Map<number, UserData> = new Map();
+    for (let row of result.rows) {
+        const item:SubUserData = {
+            visitorid: row.id,
+            token: row.token,
+            alias: row.alias,
+            updated: row.updated,
+            commentCount: 0,
+            flaggedCount: 0,
+            lastPost: 0,
+            ipAddresses: [],
+            users: [],
+            names: [],
+            isActive: false,
+            blocked: false
+        }
+        userList.push(item);
+        ids.push(row.id);
+        userMap.set(row.id, item);
+    }
+
+    const collatedUserData = await getRelatedUsersAndAddressesByIds(ids);
+    const subUsersIndex:Map<number, number> = new Map();
+    for (let row of collatedUserData) {
+        const item = userMap.get(row.origid);
+        if (!item) { continue; }
+        const indexed = subUsersIndex.get(row.visitorid);
+        item.users.push({
+            visitorid: row.id,
+            token: row.token,
+            blocked: row.vblocked,
+            created: row.created
+        });
+
+        const idx = item.ipAddresses.findIndex((ipData) => { return ipData.address == row.address });
+        if (idx == -1 || idx == undefined) {
+                item.ipAddresses.push({
+                address: row.address, 
+                blocked: row.iblocked,
+                domain: row.domain,
+                countryCode: row.countrycode,
+                city: row.city,
+                state: row.state,
+            });
+        }
+
+        subUsersIndex.set(row.visitorid, row.origid);
+    }
+
+    text = `SELECT c.count, f.flagged, p.lastpost, v.id as visitorid
+		FROM visitor v
+        LEFT OUTER JOIN(SELECT COUNT(visitorid) count, visitorid FROM comment GROUP BY visitorid ORDER BY count DESC) c
+			ON (c.visitorid = v.id)
+        LEFT OUTER JOIN(SELECT COUNT(id) flagged, visitorid FROM comment WHERE flagged = true GROUP BY visitorid) f ON(f.visitorid = c.visitorid)
+        LEFT OUTER JOIN(SELECT MAX(posted) lastpost, visitorid FROM comment GROUP BY visitorid) p ON(p.visitorid = c.visitorid)
+        ORDER BY lastpost DESC, token
+    `;
+    result = await pool.query(text, []);
+
+    for (let row of result.rows) {
+        const item = userMap.get(row.visitorid);
+        if (!item) { continue; }
+
+        if (row.count != null) {
+            item.commentCount += Number.parseInt(row.count);
+        }
+        if (row.flagged != null) {
+            item.flaggedCount += Number.parseInt(row.flagged);
+        }
+
+        let lastPost = (row.lastPost != null) ? Number.parseInt(row.lastPost) : 0;
+        if (lastPost > item.lastPost) {
+            item.lastPost = lastPost;
+        }
+    }
+
+    const names = await getUserNames();
+    for (let namePair of names) {
+        if (namePair.name == null || namePair.name.trim().length == 0 ||
+            namePair.name == "[deleted]"
+        ) { 
+            continue 
+        }
+        const item = userMap.get(namePair.visitorid);
+        if (item == undefined) {continue}
+        item.names.push(namePair.name);
+    }
+
+    return userList;
 }
 
 export async function getUserData(): Promise<UserData[]> {
@@ -550,6 +658,7 @@ export async function getUserData(): Promise<UserData[]> {
             alias: row.alias,
             updated: row.updated,
             ipAddresses: [],
+            users: [],
             names: [],
             isActive: false,
             blocked: row.blocked
@@ -558,6 +667,7 @@ export async function getUserData(): Promise<UserData[]> {
         index.set(item.visitorid, ret.length);
         ret.push(item);
     }
+
 
     const names = await getUserNames();
     for (let namePair of names) {
@@ -622,24 +732,29 @@ export async function isUserBlacklisted(token:string):Promise<boolean> {
     return false;
 }
 
-export async function getRelatedUsersAndAddressesById(id:string):Promise<any[]> {
-    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked,
-		ip.firstvisited, ip.address, ip."state", 
-		ip.city, ip.country, ip.blocked iblocked
+export async function getRelatedUsersAndAddressesByIds(ids:string[]):Promise<any[]> {
+    if (ids.length == 0) {
+        return [];
+    }
+
+    const text = `SELECT DISTINCT v.origid, visitor.id, visitor.token, visitor.blocked vblocked, visitor.created,
+		ip.firstvisited, ip.domain, ip.address, ip."state", 
+		ip.city, ip.countrycode, ip.blocked iblocked
 	FROM visitor 
 	JOIN (
-		SELECT iv.* FROM ip_visitor iv JOIN (
-			SELECT DISTINCT(iv.ipid) FROM ip_visitor iv JOIN (
-				SELECT iv.visitorid FROM ip_visitor iv
+		SELECT iv.*, i.origid FROM ip_visitor iv JOIN (
+			SELECT iv.ipid, v.origid FROM ip_visitor iv JOIN (
+				SELECT iv.visitorid, v.id origid FROM ip_visitor iv
 				JOIN visitor v ON v.id = iv.visitorid
-					WHERE v.id = $1
 			) v ON v.visitorid = iv.visitorid
 		) i ON i.ipid = iv.ipid		
 	) v ON v.visitorid = visitor.id
 	JOIN ip ON v.ipid = ip.id
+	WHERE v.origid IN (${ids.join(',')})
+	ORDER BY origid, visitor.id DESC
     `;
 
-    const result = await pool.query(text, [id]);
+    const result = await pool.query(text, []);
     return result.rows;
 }
 
@@ -685,17 +800,23 @@ export async function getRelatedUsersAndAddresses(ip:string):Promise<any[]> {
     return result.rows;
 }
 
-export async function getUserAddresses(): Promise<UserAddress[]> {
-    const text = `SELECT v.id, c.posted, i.firstvisited, i.address, i.blocked, i.domain, i.countryCode, i.city, i.state
-            FROM visitor v
-            LEFT OUTER JOIN (SELECT MAX(posted) posted, visitorid FROM comment GROUP BY visitorid) c ON v.id = c.visitorid
-            JOIN ip_visitor iv ON iv.visitorid = v.id
-            JOIN (SELECT id, firstvisited, address, blocked, domain, countryCode, city, state FROM ip) i ON i.id = iv.ipid
-    		order by v.id, c.posted, i.firstvisited
-    `
-
-    const result = await pool.query(text, []);
-    return result.rows;
+export async function getUserAddresses(id: number[]): Promise<UserAddress[]> {
+    const text = `SELECT DISTINCT v.origid, visitor.id, visitor.token, visitor.blocked vblocked, visitor.created,
+		ip.firstvisited, ip.address, ip."state", 
+		ip.city, ip.countrycode, ip.blocked iblocked
+	FROM visitor 
+	JOIN (
+		SELECT iv.*, i.origid FROM ip_visitor iv JOIN (
+			SELECT iv.ipid, v.origid FROM ip_visitor iv JOIN (
+				SELECT iv.visitorid, v.id origid FROM ip_visitor iv
+				JOIN visitor v ON v.id = iv.visitorid
+			) v ON v.visitorid = iv.visitorid
+		) i ON i.ipid = iv.ipid		
+	) v ON v.visitorid = visitor.id
+	JOIN ip ON v.ipid = ip.id
+	WHERE v.origid IN (2158, 2028)
+	ORDER BY origid, visitor.id DESC
+    `;
 }
 
 export async function getAlias(after: number = 0):Promise<any[]> {

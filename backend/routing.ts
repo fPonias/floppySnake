@@ -16,6 +16,7 @@ import {
     createPost,
     flagComment,
     getUserData,
+    getRecentUserData,
     getAlias,
     updateAlias,
     getFilterList,
@@ -472,7 +473,8 @@ sectigo.com
             return;
         }
 
-        getUserData()
+        const now = new Date().getTime();
+        getRecentUserData(now - 3600 * 8 * 1000)
             .then(userData => {
                 MyWebSocket.instance.markActiveUsers(userData);
                 res.status(200).send(JSON.stringify(userData));
@@ -587,7 +589,7 @@ sectigo.com
         const json = req.body;
         console.log("block user called for " + JSON.stringify(json));
         await blockUser(json.id, json.blocked);
-        const related = await getRelatedUsersAndAddressesById(json.id);
+        const related = await getRelatedUsersAndAddressesByIds([json.id]);
         console.log("found " + related.length + " related user entries");
 
         const called = new Set<number>()
