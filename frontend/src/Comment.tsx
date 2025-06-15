@@ -7,7 +7,7 @@ import EventEmitter from "reactjs-eventemitter";
 import { findHyperlinks } from "./CommentUtil";
 import { UserDetails } from "./AdminMain";
 import { getStickerIndex, Stickers } from "./Sticker";
-import { UserData } from "./AdminTools";
+import { SubUserData } from "./AdminTools";
 
 interface CommentProps {
     comment: CommentEntry,
@@ -150,7 +150,7 @@ const Comment:React.FC<CommentProps> = ({
         setNameListOpen(false);
     }
 
-    function onUserBlocked(userData: UserData, blocked: boolean) {
+    function onUserBlocked(userData: SubUserData, blocked: boolean) {
         const adminToken = appContext.adminBackend?.adminToken;
         if (!adminToken) { return; }
         if (!appContext.adminBackend) { return; }

@@ -17,10 +17,19 @@ export interface UserData {
     token: string,
     updated: number,
     ipAddresses: IPAddress[],
+    users: SubUserData[],
     names: string[],
     isActive: boolean
     alias: string,
     blocked: boolean
+}
+
+export interface SubUserData {
+    visitorid: number,
+    token: string,
+    updated: number,
+    blocked: boolean,
+    created: number | null
 }
 
 export interface Filter {
