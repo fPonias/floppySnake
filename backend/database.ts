@@ -536,6 +536,7 @@ export interface SubUserData {
 }
 
 export async function getRecentUserData(start: number): Promise<UserData[]> {
+    console.log('fetching userdata from ' + start);
     let text = `SELECT * FROM visitor 
         WHERE updated >= $1
         ORDER BY updated DESC
@@ -570,13 +571,16 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
     for (let row of collatedUserData) {
         const item = userMap.get(row.origid);
         if (!item) { continue; }
-        const indexed = subUsersIndex.get(row.visitorid);
-        item.users.push({
-            visitorid: row.id,
-            token: row.token,
-            blocked: row.vblocked,
-            created: row.created
-        });
+        const index = item.users.findIndex((line) => {return line.visitorid == row.id})
+
+        if (index == -1 || index == undefined) {
+            item.users.push({
+                visitorid: row.id,
+                token: row.token,
+                blocked: row.vblocked,
+                created: row.created
+            });
+        }
 
         const idx = item.ipAddresses.findIndex((ipData) => { return ipData.address == row.address });
         if (idx == -1 || idx == undefined) {
@@ -588,6 +592,11 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
                 city: row.city,
                 state: row.state,
             });
+        } else if (item.ipAddresses[idx].domain != row.domain) {
+            item.ipAddresses[idx].domain = row.domain;
+            item.ipAddresses[idx].countryCode = row.countrycode;
+            item.ipAddresses[idx].city = row.city;
+            item.ipAddresses[idx].state = row.state;
         }
 
         subUsersIndex.set(row.visitorid, row.origid);

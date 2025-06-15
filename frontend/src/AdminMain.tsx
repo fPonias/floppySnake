@@ -47,7 +47,7 @@ export const AdminMain:React.FC<AdminMainProps> = ({
         }
     */
 
-    function onUserBlocked(userData: UserData, blocked: boolean) {
+    function onUserBlocked(userData: SubUserData, blocked: boolean) {
         const adminToken = appContext.adminBackend?.adminToken;
         if (!adminToken) { return; }
         if (!appContext.adminBackend) { return; }
@@ -116,19 +116,11 @@ export const AdminMain:React.FC<AdminMainProps> = ({
     if (!appContext.adminEnabled || !appContext.adminBackend) { return (<></>) }
 
 
-    const filtered = userData.filter((value) => {
-        if (value.isActive) { return true; }
-        if (value.lastPost >= today) { return true; }
-        const diff = value.updated - tenMin;
-        if (diff >= 0) { return true; }
-
-        return false;
-    })
     return (<div className="admin">
         <table className="adminPanel">
-            <thead><tr><th>id</th><th>name</th><th>posts</th><th>flagged</th><th>active</th></tr></thead>
+            <thead><tr><th>id</th><th>name</th><th>posts</th><th>blocked</th><th>active</th></tr></thead>
             <tbody>
-                {filtered.map((value, _) => {
+                {userData.map((value, _) => {
                     //const alias = aliasData.get(value.visitorid)
                     return (
                         <AdminLine userData={value} onNameClicked={onNameClicked} />
@@ -163,13 +155,20 @@ const AdminLine: React.FC<AdminLineProps> = ({
             setAliasLocal(value);
         }
     */
+    const isIBlocked = userData.ipAddresses.findIndex((line) => { return line.blocked; })
+    const isUBlocked = userData.users.findIndex((line) => { return line.blocked; });
+
+    let blockedValue = ""
+    if (isUBlocked > -1) { blockedValue += "U" }
+    if (isIBlocked > -1) { blockedValue += "I" }
+
     return (<tr>
         <td>{userData.visitorid}</td>
         <td
             onClick={(event) => { onNameClicked(userData.visitorid, event) }}
         >{userData.names[0]}</td>
         <td>{userData.commentCount}</td>
-        <td>{userData.flaggedCount ?? 0}</td>
+        <td>{blockedValue}</td>
         <td>{userData.isActive ? "X" : ""}</td>
     </tr>)
 }
@@ -179,7 +178,7 @@ interface UserDetailsProps {
     userData: UserData,
     nameListOffset: number[],
     onClosed: () => void,
-    onBlocked: (userData: UserData, blocked: boolean) => void,
+    onBlocked: (userData: SubUserData, blocked: boolean) => void,
     onIPBlocked: (address: string, blocked: boolean) => void,
 }
 
@@ -221,19 +220,24 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
             <div className="nameList"
                 style={{ left: nameListOffset[0], top: nameListOffset[1] }}
             >
-                <div className="userBlockDiv">
-                    <div>block {userData.visitorid}</div>
-                    <input type="checkbox" checked={userData.blocked} onChange={() => {onBlocked(userData, !userData.blocked)}}/>
-                </div>
                 <div>
-                    {userData.names.map((name) => {
-                        return (<div key={Math.random()}>{name}</div>);
+                    {userData.ipAddresses.map((address) => {
+                        return (<IPEntry ipData={address} onBlocked={(data) => {onIPBlocked(data, !address.blocked)}} />)
                     })}
                 </div>
                 <div className="line"></div>
                 <div>
-                    {userData.ipAddresses.map((address) => {
-                        return (<IPEntry ipData={address} onBlocked={(data) => {onIPBlocked(data, !address.blocked)}} />)
+                    {userData.users.map((user) => { return (
+                        <div className="userBlockDiv">
+                            <div>block {user.visitorid}</div>
+                            <input type="checkbox" checked={user.blocked} onChange={() => {onBlocked(user, !user.blocked)}}/>
+                        </div>
+                    )})}
+                </div>
+                <div className="line"></div>
+                <div>
+                    {userData.names.map((name) => {
+                        return (<div key={Math.random()}>{name}</div>);
                     })}
                 </div>
             </div>

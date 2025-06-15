@@ -26,6 +26,7 @@ import {
     blockUser,
     blockIP,
     isUserBlacklisted,
+    getRelatedUsersAndAddressesByIds,
     getRelatedUsersAndAddressesByToken,
     getRelatedUsersAndAddresses,
 } from './database';

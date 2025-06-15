@@ -95,7 +95,12 @@ const Comment:React.FC<CommentProps> = ({
     }
 
     useEffect(() => {
-        if (!localComment || localComment.id != comment.id || comment.blocked != localComment.blocked) {
+        if (!localComment || 
+            localComment.id != comment.id || 
+            comment.blocked != localComment.blocked ||
+            comment.name != localComment.name ||
+            comment.comment != localComment.comment
+        ) {
             setComment(comment);
         }
     }, [comment, localComment]);
