@@ -141,12 +141,12 @@ sectigo.com
         }
     }
 
-    app.get('/floppySnake.js', (req, res) => {
+    app.get('{/:version}/floppySnake{:version}.js', (req, res) => {
         console.log("static /floppySnake.js called")
         findFirst(".js", res);
     });
 
-    app.get('/floppySnake.css', (req, res) => {
+    app.get('{/:version}/floppySnake.css', (req, res) => {
         console.log("static /floppySnake.css called")
         findFirst(".css", res)
     })
@@ -163,7 +163,7 @@ sectigo.com
 
     app.get('/comments/:postid/all/:token', (req, res) => {
         console.log("get comments called with " + JSON.stringify(req.params));
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted || !allowPosts) {
             console.log("blacklisted get comments called with " + JSON.stringify(req.params));
             getTopGibberishComments(req.params.postid)
                 .then(response => {
@@ -184,7 +184,8 @@ sectigo.com
     })
 
     app.get('/comments/:postid/before/:before/:token', (req, res) => {
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
+            if (isBlacklisted || !allowPosts) {
             console.log("blacklisted get comment before called with " + JSON.stringify(req.params));
             getOlderGibberishComments(req.params.postid)
                 .then(response => {
@@ -218,7 +219,8 @@ sectigo.com
 
     app.get('/comments/:postid/after/:after/:token', (req, res) => {
            console.log("get comment after called with " + JSON.stringify(req.params));
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
+            if (isBlacklisted || !allowPosts) {
             console.log("blacklisted get comment after called with " + JSON.stringify(req.params));
             getRecentGibberishComments(req.params.postid, req.params.after)
                 .then(response => {
@@ -239,7 +241,8 @@ sectigo.com
     })
 
     app.get('/comment/:id/:token', (req, res) => {
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
+            if (isBlacklisted || !allowPosts) {
             console.log("blacklisted get comment called with " + JSON.stringify(req.params));
             getCommentGibberish(req.params.id)
                 .then(response => {

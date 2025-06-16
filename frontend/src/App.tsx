@@ -184,8 +184,11 @@ function App() {
                 }
             } else if (data.action == "allowPosts") {
                 appContext.allowPosts = data.allowPosts;
-                setTriggerUpdate();
-                setTriggerAdminUpdate();
+
+                forceUpdate(0).then(() => {
+                    setTriggerUpdate();
+                    setTriggerAdminUpdate();
+                });
             } else if (data.action == "filtersUpdated") {
                 if (appContext.adminBackend && appContext.adminEnabled) {
                     appContext.adminBackend.runUpdateFilters().then(
