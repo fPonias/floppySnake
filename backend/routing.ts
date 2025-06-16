@@ -25,6 +25,7 @@ import {
     deleteFilter,
     blockUser,
     blockIP,
+    BlackListType,
     isUserBlacklisted,
     getRelatedUsersAndAddressesByIds,
     getRelatedUsersAndAddressesByToken,
@@ -161,9 +162,10 @@ sectigo.com
         findFirst(".css", res)
     })
 
-    app.get('/comments/:postid/all/:token', (req, res) => {
+    app.get('/comments/:postid/all/:token', async (req, res) => {
         console.log("get comments called with " + JSON.stringify(req.params));
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+        const isBlacklisted = await isUserBlacklisted(req.params.token);
+        if (isBlacklisted == BlackListType.BLOCKED) {
             console.log("blacklisted get comments called with " + JSON.stringify(req.params));
             getTopGibberishComments(req.params.postid)
                 .then(response => {
@@ -172,7 +174,7 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        } else {
+        } else if (isBlacklisted == BlackListType.PERMITTED) {
             getTopComments(req.params.postid)
                 .then(response => {
                     res.status(200).send(response);
@@ -180,7 +182,9 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        }});
+        } else {
+            res.status(200).send(JSON.stringify([]));
+        }
     })
 
     app.get('/comments/:postid/before/:before/:token', (req, res) => {
@@ -238,8 +242,10 @@ sectigo.com
         }});
     })
 
-    app.get('/comment/:id/:token', (req, res) => {
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+    app.get('/comment/:id/:token', async (req, res) => {
+        const isBlacklisted = await isUserBlacklisted(req.params.token);
+
+        if (isBlacklisted == BlackListType.BLOCKED) {
             console.log("blacklisted get comment called with " + JSON.stringify(req.params));
             getCommentGibberish(req.params.id)
                 .then(response => {
@@ -248,7 +254,7 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        } else {
+        } else if (isBlacklisted == BlackListType.PERMITTED) {
             console.log("get comment called with " + JSON.stringify(req.params));
             getComment(req.params.id)
                 .then(response => {
@@ -257,7 +263,9 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        }});
+        } else {
+            res.status(200).send(JSON.stringify([]));
+        }
     });
 
     app.get('/comment/flag/:id{/:token}', (req, res) => {

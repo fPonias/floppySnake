@@ -32,6 +32,7 @@ export interface AppContextProps {
     onPosted: () => void,
     stickerIndex: Map<number, number>,
     g: boolean
+    userStatus: number
 };
 
 export const AppContext = createContext<AppContextProps>({
@@ -46,6 +47,7 @@ export const AppContext = createContext<AppContextProps>({
     onPosted: () => {},
     stickerIndex: new Map(),
     g: false,
+    userStatus: -1,
 });
 
 export interface AppUpdateContextProps {
@@ -134,6 +136,7 @@ function App() {
                 commentBack.apiToken = data.token;
 
                 appContext.g = data.g;
+                appContext.userStatus = data.status;
                 firstLoad();
 
                 if (cookies.token) {
@@ -442,14 +445,33 @@ function App() {
         </div>)
     }
 
-    return (<div className='outer'>
+    function renderMain() {
         {renderAdminPanel()}
-        {renderCommentCount()}
-        <FormComponent onAdminEnabled={(_) => onAdminEnabled()} />
-        <div className='comments'>
-            {renderComments(0, comments)}
-            {renderLoadMore()}
-        </div>
+        
+        if (appContext.userStatus == -1) {
+            return (<></>)
+        } else if (appContext.userStatus == 0) {
+            return (<>
+                <div className="titleDiv">
+                    <div>
+                        <span className="title">Unknown user</span> 
+                    </div>
+                    <div className='subtitle'>Tell us about yourself.</div>
+                </div>
+                <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
+            </>)
+        } else { return ( <>
+            {renderCommentCount()}
+            <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
+            <div className='comments'>
+                {renderComments(0, comments)}
+                {renderLoadMore()}
+            </div>
+        </> )}
+    }
+
+    return (<div className='outer'>
+        {renderMain()}
     </div>)
 }
 

@@ -16,7 +16,7 @@ interface FormArgs {
 export function FormComponent({
     replyTo = undefined,
     active = true,
-    onAdminEnabled = (_) => {}
+    onAdminEnabled = (_) => {},
 }: FormArgs): JSX.Element {
     const appContext = useContext(AppContext);
     const [comment, setComment] = useState<string>(appContext.activeReply?.comment ?? "");
@@ -118,10 +118,13 @@ export function FormComponent({
 
     if (!appContext.allowPosts) { return (<></>)}
 
+    const nameLabelTxt= (appContext.userStatus == 0) ? "What is your name:" : "Name:";
+    const commentLabelTxt = (appContext.userStatus == 0) ? "What is your quest:" : "Comment:";
+
     return (<>
         <form id="postForm" ref={(ref) => { form.current = ref; }}>
             <div className="input">
-                <div className="label" ref={(ref) => {nameLabel.current = ref}} onClick={() => {onAdminTap(nameLabel.current)}}>Name: </div>
+                <div className="label" ref={(ref) => {nameLabel.current = ref}} onClick={() => {onAdminTap(nameLabel.current)}}>{nameLabelTxt}</div>
                 <input className="formItem"
                     name='name' value={cookies.name}
                     onChange={(evt) => { validateAndSetName(evt) }}
@@ -129,7 +132,7 @@ export function FormComponent({
             </div>
             <div className='input'>
                 <div className="label" ref={(ref) => { commentLabel.current = ref }} onClick={() => { onAdminTap(commentLabel.current) }}>
-                    Comment:<br />
+                    {commentLabelTxt}<br />
                     <span className='sublabel'>({comment.length} / 400)</span>
                 </div>
                 <textarea name='comment' className='formItem'

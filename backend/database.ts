@@ -729,16 +729,38 @@ interface UserAddress {
     state: string,
 }
 
-export async function isUserBlacklisted(token:string):Promise<boolean> {
+export enum BlackListType {
+    NEW_USER,
+    REQUESTED,
+    BLOCKED,
+    PERMITTED
+};
+
+export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     const related = await getRelatedUsersAndAddressesByToken(token);
+    const ids:number[] = [];
     for (let i = 0; i < related.length; i++) {
+        ids.push(related.id);
         if (related[i].vblocked || related[i].iblocked) {
             console.log("user " + token + " matched blacklist " + JSON.stringify(related[i]))
-            return true;
+            return BlackListType.BLOCKED;
         }
     }
 
-    return false;
+    const idStr = ids.join(",");
+    if (idStr.length == 0) {
+        return BlackListType.NEW_USER;
+    }
+
+    const text = `SELECT COUNT(id) FROM comment WHERE visitorid IN (${idStr})`;
+    const result = await pool.query(text, []);
+    if (result.rows[0] == 0) {
+        return BlackListType.NEW_USER;
+    } else if (result.rows[0] == 1) {
+        return BlackListType.REQUESTED;
+    }
+
+    return BlackListType.PERMITTED;
 }
 
 export async function getRelatedUsersAndAddressesByIds(ids:string[]):Promise<any[]> {

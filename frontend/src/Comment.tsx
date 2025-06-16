@@ -99,7 +99,8 @@ const Comment:React.FC<CommentProps> = ({
             localComment.id != comment.id || 
             comment.blocked != localComment.blocked ||
             comment.name != localComment.name ||
-            comment.comment != localComment.comment
+            comment.comment != localComment.comment || 
+            comment.flagged != localComment.flagged
         ) {
             setComment(comment);
         }
