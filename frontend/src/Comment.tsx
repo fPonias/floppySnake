@@ -7,7 +7,7 @@ import EventEmitter from "reactjs-eventemitter";
 import { findHyperlinks } from "./CommentUtil";
 import { UserDetails } from "./AdminMain";
 import { getStickerIndex, Stickers } from "./Sticker";
-import { SubUserData } from "./AdminTools";
+import { SubUserData, UserData } from "./AdminTools";
 
 interface CommentProps {
     comment: CommentEntry,
@@ -151,6 +151,8 @@ const Comment:React.FC<CommentProps> = ({
         setNameListOpen(false);
     }
 
+
+
     function onUserBlocked(userData: SubUserData, blocked: boolean) {
         const adminToken = appContext.adminBackend?.adminToken;
         if (!adminToken) { return; }
@@ -169,6 +171,16 @@ const Comment:React.FC<CommentProps> = ({
         appContext.adminBackend.blockIP(address, blocked);
     }
 
+
+    function onUserAllowed(userData: UserData, allowed: boolean) {
+        const adminToken = appContext.adminBackend?.adminToken;
+        if (!adminToken) { return; }
+        if (!appContext.adminBackend) { return; }
+
+        appContext.adminBackend.adminToken = adminToken;
+        appContext.adminBackend.allowUser(userData.visitorid, allowed);
+    }
+
     function renderNameList(): JSX.Element {
         if (!appContext.adminEnabled || !appContext.adminBackend) { return (<></>)}
         if (!nameListOpen || !nameListId) { return (<></>) }
@@ -185,7 +197,8 @@ const Comment:React.FC<CommentProps> = ({
                 userData={data} 
                 onClosed={closeNameList} 
                 onBlocked={(data, blocked) => {onUserBlocked(data, blocked)}}
-                onIPBlocked={((address, blocked) => {onIPBlocked(address, blocked)})}
+                onIPBlocked={((address, blocked) => { onIPBlocked(address, blocked) })}
+                onAllowed={(userData, allowed) => { onUserAllowed(userData, allowed) }}
             />
         )
     }

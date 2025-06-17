@@ -443,7 +443,7 @@ function App() {
             <div>
                 <span className="title">Leave a comment</span> 
             </div>
-            <div className='subtitle'>Haters will be ridiculed.</div>
+            <div className='subtitle'>A Snek free day is a good day.</div>
             <div className='count'>
                 <span className='commentCount'>{count}</span>
                 <span>Comments so far</span>
@@ -464,15 +464,39 @@ function App() {
                 </div>
                 <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
             </>)
-        } else { return ( <>
-            {renderCommentCount()}
-            {renderSnakeQuote()}
-            <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
-            <div className='comments'>
-                {renderComments(0, comments)}
-                {renderLoadMore()}
-            </div>
-        </> )}
+        } else if (appContext.userStatus == 1) {
+            return (<>
+                <div className="titleDiv">
+                    <div>
+                        <span className="title">Thank you</span>
+                    </div>
+                    <div className='subtitle'>Your request for admittance has been submitted.</div>
+                </div>
+            </>)
+        } else if (appContext.userStatus == 3) {
+            return (<>
+                {renderCommentCount()}
+                {renderSnakeQuote()}
+                <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
+                <div className='comments'>
+                    {renderComments(0, comments)}
+                    {renderLoadMore()}
+                </div>
+            </> )
+        } else {
+            return (<>
+                <div className="titleDiv">
+                    <div>
+                        <span className="title">You have been banned</span>
+                    </div>
+                    <div className='subtitle'>If you feel there's been a mistake, whine about it on Snek antiSocial.  Be sure to talk extra loud so Azzreel can hear you.</div>
+                </div>
+                <div className='comments'>
+                    {renderComments(0, comments)}
+                    {renderLoadMore()}
+                </div>
+            </>)
+        }
     }
 
     function renderSnakeQuote() {

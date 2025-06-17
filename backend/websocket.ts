@@ -160,8 +160,8 @@ export default class MyWebSocket {
             checkToken(token, connData.ip).then(async (visitorid) => {
                 connData.token = token;
                 this.tokenIndex.set(token, connData);
-                console.log("visitor " + visitorid + " logged in");
                 const userStatus = await isUserBlacklisted(token);
+                console.log("visitor " + visitorid + " logged in with status " + userStatus);
 
                 const message = JSON.stringify({ action: "token", token: token, status: userStatus });
                 connection.send(message);

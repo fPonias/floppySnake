@@ -28,6 +28,7 @@ import {
     isUserBlacklisted,
     getRelatedUsersAndAddressesByIds,
     getRelatedUsersAndAddresses,
+    allowUsers,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -312,12 +313,13 @@ sectigo.com
             })
     });
 
-    app.post('/comment', (req, res) => {
+    app.post('/comment', async (req, res) => {
         console.log("post comment called with " + JSON.stringify(req.body));
 
         if (!allowPosts) { 
             res.status(500).send("nope");
         }
+
 
         const json = req.body;
         if (json.comment === undefined || json.name === undefined) {
@@ -333,27 +335,39 @@ sectigo.com
         const now = new Date().getTime();
         const token = json.token
 
-        filterString(name).then((name) => {
-            filterString(original).then((comment) => {
-                if (original == comment) {
-                    original = "";
-                } else {
-                    console.log("comment " + original + " filtered to " + comment);
-                }
+        const status = await isUserBlacklisted(token);
+        if (status == BlackListType.BLOCKED || status == BlackListType.REQUESTED) {
+            res.status(500).send("nope");
+            return;
+        }
 
-                createComment(token, comment, name, postid, parent, original)
-                    .then(response => {
-                        console.log("post comment successful");
-                        res.status(200).send(response);
+        name = await filterString(name)
+        let comment = await filterString(original)
+        if (original == comment) {
+            original = "";
+        } else {
+            console.log("comment " + original + " filtered to " + comment);
+        }
 
-                        MyWebSocket.instance.broadcastNewPost(postid, now);
-                    })
-                    .catch(error => {
-                        console.log("post comment failed with " + JSON.stringify(error));
-                        res.status(500).send(error);
-                    })
-            })
-        })
+        try {
+            const response = await createComment(token, comment, name, postid, parent, original)
+            console.log("post comment successful");
+            res.status(200).send(response);
+
+            MyWebSocket.instance.broadcastNewPost(postid, now);
+
+            const status = await isUserBlacklisted(token);
+            if (status == BlackListType.REQUESTED) {
+                MyWebSocket.instance.sendMessage(token, JSON.stringify({
+                    action: "token",
+                    token: token,
+                    status: status
+                }));
+            }
+        } catch(error) {
+            console.log("post comment failed with " + JSON.stringify(error));
+            res.status(500).send(error);
+        }
     })
 
     app.delete('/comment/:id{/:token}', (req, res) => {
@@ -602,6 +616,51 @@ sectigo.com
             res.status(500).send("nope");
             return
         })
+    })
+
+    app.post("/allowUser{/:token}", async (req, res) => {
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        const now = new Date().getTime();
+        const json = req.body;
+        console.log("allow users called for " + JSON.stringify(json));
+        const related = await getRelatedUsersAndAddressesByIds([json.id]);
+        console.log("found " + related.length + " related user entries");
+
+        if (related.length == 0) {
+            res.status(500).send();
+            return;
+        }
+
+        const ids:number[] = [];
+        for (let line of related) {
+            ids.push(line.id);
+        }
+        await allowUsers(ids, json.allow);
+        const status = await isUserBlacklisted(related[0].token);
+
+        const called = new Set<number>()
+        for (let i = 0; i < related.length; i++) {
+            if (!related[i].vblocked && !called.has(related[i].id)) {
+                called.add(related[i].id);
+                MyWebSocket.instance.sendMessage(related[i].token, JSON.stringify({
+                    action: "token",
+                    token: related[i].token,
+                    status: status
+                }));
+                MyWebSocket.instance.sendMessage(related[i].token, JSON.stringify({ action: "refresh" }));
+            }
+        }
+
+        console.log("sending block broadcast");;
+
+        res.status(200).send("success");
+        MyWebSocket.instance.broadcastBlocked(now);
     })
 
     app.post("/blockUser{/:token}", async (req, res) => {

@@ -65,6 +65,15 @@ export const AdminMain:React.FC<AdminMainProps> = ({
         appContext.adminBackend.blockIP(address, blocked);
     }
 
+    function onUserAllowed(userData: UserData, allowed: boolean) {
+        const adminToken = appContext.adminBackend?.adminToken;
+        if (!adminToken) { return; }
+        if (!appContext.adminBackend) { return; }
+
+        appContext.adminBackend.adminToken = adminToken;
+        appContext.adminBackend.allowUser(userData.visitorid, allowed);
+    }
+
     function closeNameList() {
         setNameListOpen(false);
     }
@@ -85,6 +94,7 @@ export const AdminMain:React.FC<AdminMainProps> = ({
                 onClosed={closeNameList} 
                 onBlocked={(data, blocked) => {onUserBlocked(data, blocked)}}
                 onIPBlocked={(address, blocked) => {onIPBlocked(address, blocked)}}
+                onAllowed={(userData, allowed) => {onUserAllowed(userData, allowed)}}
             />
         )
     }
@@ -182,6 +192,7 @@ interface UserDetailsProps {
     onClosed: () => void,
     onBlocked: (userData: SubUserData, blocked: boolean) => void,
     onIPBlocked: (address: string, blocked: boolean) => void,
+    onAllowed: (userData: UserData, allowed: boolean) => void,
 }
 
 export const UserDetails: React.FC<UserDetailsProps> = ({
@@ -190,6 +201,7 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
     onClosed,
     onBlocked,
     onIPBlocked,
+    onAllowed,
 }: UserDetailsProps) => {
     const nameListOpened = useRef(0);
     const selfClicked = useRef(0);
@@ -217,11 +229,19 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
         selfClicked.current = new Date().getTime();
     }
 
+    const isNotAllowedIdx = userData.users.findIndex((value) => {return !value.allowed});
+    const isAllowed = (isNotAllowedIdx == -1);
+
     return (
         <div className="nameListContainer" onClick={() => { selfClickedEvt() }}>
             <div className="nameList"
                 style={{ left: nameListOffset[0], top: nameListOffset[1] }}
             >
+                <div className="userBlockDiv">
+                    <div>Allow entry?</div>
+                    <input type="checkbox" checked={isAllowed} onChange={() => {onAllowed(userData, !isAllowed)}} />
+                </div>
+                <div className="line"></div>
                 <div>
                     {userData.ipAddresses.map((address) => {
                         return (<IPEntry ipData={address} onBlocked={(data) => {onIPBlocked(data, !address.blocked)}} />)

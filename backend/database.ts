@@ -705,11 +705,16 @@ export enum BlackListType {
 export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     const related = await getRelatedUsersAndAddressesByToken(token);
     const ids:number[] = [];
+    let allowed = true;
     for (let i = 0; i < related.length; i++) {
         ids.push(related[i].id);
-        if (related[i].vblocked || related[i].iblocked || !related[i].allowed) {
+        if (related[i].vblocked || related[i].iblocked) {
             console.log("user " + token + " matched blacklist " + JSON.stringify(related[i]))
             return BlackListType.BLOCKED;
+        }
+
+        if (!related[i].allowed) {
+            allowed = false;
         }
     }
 
@@ -730,8 +735,12 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     const result = await pool.query(text, []);
     if (result.rows[0].count == 0) {
         return BlackListType.NEW_USER;
-    } else if (result.rows[0].count == 1) {
+    } else if (result.rows[0].count == 1 && !allowed) {
         return BlackListType.REQUESTED;
+    }
+
+    if (!allowed) {
+        return BlackListType.BLOCKED;
     }
 
     return BlackListType.PERMITTED;
@@ -899,6 +908,28 @@ export async function deleteFilter(arg: number) {
         await pool.query(text, [arg]);
     } catch (e) {
         console.log("failed to delete filter " + JSON.stringify(e));
+    }
+}
+
+export async function allowUsers(ids: number[], allow: boolean) {
+    try {
+        let idStr = ""
+        for (let id of ids) {
+            if (idStr.length == 0) {
+                idStr += id;
+            } else {
+                idStr += "," + id;
+            }
+        }
+
+        let text = `UPDATE visitor SET allowed = $1 WHERE id IN (${idStr})`
+        await pool.query(text, [allow]);
+
+        text = `UPDATE comment SET updated = $1 WHERE visitorid IN (${idStr})`
+        const now = new Date().getTime();
+        await pool.query(text, [now]);
+    } catch (e) {
+        console.log("failed to allow user " + ids + " with " + e);
     }
 }
 
