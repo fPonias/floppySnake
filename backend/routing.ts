@@ -305,7 +305,7 @@ sectigo.com
             })
     });
 
-    app.post('/comment', (req, res) => {
+    app.post('/comment', async (req, res) => {
         console.log("post comment called with " + JSON.stringify(req.body));
 
         if (!allowPosts) { 
@@ -325,6 +325,12 @@ sectigo.com
         const postid = json.postid ?? 0;
         const now = new Date().getTime();
         const token = json.token
+
+        const blocked = await isUserBlacklisted(token);
+        if (blocked) {
+            res.status(500).send("nope");
+            return;
+        }
 
         filterString(name).then((name) => {
             filterString(original).then((comment) => {
