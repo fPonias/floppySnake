@@ -157,10 +157,12 @@ const AdminLine: React.FC<AdminLineProps> = ({
     */
     const isIBlocked = userData.ipAddresses.findIndex((line) => { return line.blocked; })
     const isUBlocked = userData.users.findIndex((line) => { return line.blocked; });
+    const isNotAllowed = userData.users.findIndex((line) => { return !line.allowed; });
 
     let blockedValue = ""
     if (isUBlocked > -1) { blockedValue += "U" }
     if (isIBlocked > -1) { blockedValue += "I" }
+    if (isNotAllowed > -1 && userData.commentCount >= 1) { blockedValue += "A" }
 
     return (<tr>
         <td>{userData.visitorid}</td>

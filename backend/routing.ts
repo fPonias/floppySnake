@@ -421,7 +421,6 @@ sectigo.com
         const url = atob(req.params.url);
         getPost(url)
             .then(response => {
-                gibberishPostId = response;
                 res.status(200).send(JSON.stringify({ id: response }));
             })
             .catch(error => {
