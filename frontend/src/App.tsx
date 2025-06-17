@@ -187,8 +187,11 @@ function App() {
                 }
             } else if (data.action == "allowPosts") {
                 appContext.allowPosts = data.allowPosts;
-                setTriggerUpdate();
-                setTriggerAdminUpdate();
+
+                forceUpdate(0).then(() => {
+                    setTriggerUpdate();
+                    setTriggerAdminUpdate();
+                });
             } else if (data.action == "filtersUpdated") {
                 if (appContext.adminBackend && appContext.adminEnabled) {
                     appContext.adminBackend.runUpdateFilters().then(
@@ -212,6 +215,8 @@ function App() {
             } else if (data.action == "refresh") {
                 appContext.commentBackend?.reset();
                 firstLoad();
+            } else if (data.action == "gibberish") {
+                appContext.commentBackend?.updateGibberish();
             }
         },
     });
@@ -311,6 +316,7 @@ function App() {
         await appContext.commentBackend?.getPost();
         await appContext.commentBackend?.getRecent();
         await appContext.commentBackend?.sortTree();
+        await appContext.commentBackend?.updateGibberish();
 
         await appContext.visitorBackend?.fetchNewest();
 
@@ -445,23 +451,22 @@ function App() {
         </div>)
     }
 
-    function renderMain() {
-        {renderAdminPanel()}
-        
+    function renderMain() {        
         if (appContext.userStatus == -1) {
             return (<></>)
         } else if (appContext.userStatus == 0) {
             return (<>
                 <div className="titleDiv">
                     <div>
-                        <span className="title">Unknown user</span> 
+                        <span className="title">Halt!  Who goes there?</span> 
                     </div>
-                    <div className='subtitle'>Tell us about yourself.</div>
+                    <div className='subtitle'>Identify yourself stranger.</div>
                 </div>
                 <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
             </>)
         } else { return ( <>
             {renderCommentCount()}
+            {renderSnakeQuote()}
             <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
             <div className='comments'>
                 {renderComments(0, comments)}
@@ -470,7 +475,22 @@ function App() {
         </> )}
     }
 
+    function renderSnakeQuote() {
+        if (!appContext.commentBackend?.gibberish) {
+            return (<></>)
+        }
+
+        const gibberish = appContext.commentBackend?.gibberish;
+        return (
+            <div className="snakeQuote">
+                <div>Quote of the hour</div>
+                <div style={{fontStyle: 'italic'}}>{gibberish.message}</div>
+            </div>
+        )
+    }
+
     return (<div className='outer'>
+        {renderAdminPanel()}
         {renderMain()}
     </div>)
 }

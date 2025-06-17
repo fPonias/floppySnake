@@ -25,6 +25,14 @@
     margin-right: 10px;
 }
 
+#minusOne .snakeQuote {
+    font-size: 10pt;
+    width: 300px;
+    text-align: center;
+    background-color: #f6f6f6;
+    padding: 10px;
+    margin-left: 10px;
+}
 
 #minusOne .input {
     margin-bottom: 10px;

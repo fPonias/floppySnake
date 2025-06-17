@@ -108,6 +108,11 @@ export default class MyWebSocket {
         this.sendAdminBroadcast(message);
     }
 
+    broadcastGibberish() {
+        const message = JSON.stringify({action: "gibberish"});
+        this.sendBroadcast(message);
+    }
+
     sendMessage(token: string, message:string) {
         const conn = this.tokenIndex.get(token);
         if (!conn) { return; }

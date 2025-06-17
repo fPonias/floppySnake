@@ -1,26 +1,26 @@
 import fs from 'fs';
-import nameData from '../backups/ngram'
-import CommentData from '../backups/ngram'
-import NextWordData from '../backups/ngram'
+import { NameData, CommentData, NextWordData } from '../backups/ngram'
 
-interface GibberishEntry {
-    name: stirng,
+export interface GibberishEntry {
+    name: string,
     message: string
 }
 
 export class Gibberish {
     dir = "../backups";
-    names = new Map<string, nameData>();
+    names = new Map<string, NameData>();
     namesCount = 0;
     words = new Map<string, CommentData>();
     firstWord:CommentData = {
         word: "",
         next: new Map(),
         count: 1,
-        endsFrequency: 0
+        endsFrequency: 0,
+        nextCount: 0
     }
 
     generated:Map<number, GibberishEntry> = new Map(); 
+    arr:GibberishEntry[] = [];
 
     load() {
         const data = fs.readFileSync(this.dir + "/comments-parsed.json", { encoding: 'utf8' });
@@ -55,7 +55,7 @@ export class Gibberish {
         console.log("loaded " + next.length + " first words");
     }
 
-    getComment(id: number): GibberishEntry {
+    getComment(id: number): GibberishEntry | undefined {
         if (!this.generated.has(id)) {
             this.generated.set(id, this.createComment());
         }
@@ -63,8 +63,19 @@ export class Gibberish {
         return this.generated.get(id);
     }
 
-    createComment():GibberishEntry {
-        let currentWord = this.firstWord;
+    getCommentByIndex(index: number): GibberishEntry | undefined {
+        const count = this.arr.length;
+        
+        if (count == 0) {
+            return this.createComment()
+        }
+
+        const idx = index % count;
+        return this.arr[idx];
+    }
+
+    createComment(forceLength: number | undefined = undefined):GibberishEntry {
+        let currentWord: CommentData | undefined = this.firstWord;
         let count = 0;
         let message = "";
 
@@ -80,12 +91,17 @@ export class Gibberish {
             length = 250;
         }
 
+        if (forceLength) {
+            length = forceLength;
+        }
+
         console.log("generating message max length " + length);
         while (currentWord && count < length) {
             rand = Math.floor(Math.random() * currentWord.nextCount);
-            let next: string | null = null;
+            let next: NextWordData | undefined = undefined;
             for (let key of currentWord.next.keys()) {
                 next = currentWord.next.get(key);
+                if (next == null) { break; }
                 rand = rand - next.frequency;
                 if (rand <= 0) {break}
             }
@@ -98,8 +114,10 @@ export class Gibberish {
 
             message += next.word;
 
-            rand = Math.floor(Math.random() * next.count);
-            if (rand <= next.endsFrequency) {break;}
+            const max = currentWord.nextCount + currentWord.endsFrequency;
+            rand = Math.floor(Math.random() * max);
+
+            if (rand <= currentWord.endsFrequency && forceLength == undefined) { break; }
 
             currentWord = this.words.get(next.word);
             count += 1;
@@ -109,6 +127,7 @@ export class Gibberish {
         rand = Math.floor(Math.random() * this.namesCount)
         for (let key of this.names.keys()) {
             let n = this.names.get(key);
+            if (!n) { continue; }
             rand -= n.frequency;
 
             if (rand <= 0) {
@@ -122,6 +141,7 @@ export class Gibberish {
             message: message
         };
         
+        console.log("generated name: " + ret.name + " message: " + ret.message);
         return ret;
     }
 }

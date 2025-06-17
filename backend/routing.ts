@@ -15,7 +15,6 @@ import {
     getPost,
     createPost,
     flagComment,
-    getUserData,
     getRecentUserData,
     getAlias,
     updateAlias,
@@ -28,13 +27,13 @@ import {
     BlackListType,
     isUserBlacklisted,
     getRelatedUsersAndAddressesByIds,
-    getRelatedUsersAndAddressesByToken,
     getRelatedUsersAndAddresses,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
 import { authorize, isAuthorized } from './adminKey';
 import { filterString, isBlacklisted } from './filter';
+import { GibberishInstance, GibberishEntry } from './Gibberish';
 
 const env = (env2.default) ? env2.default : env2;
 let allowPosts = true;
@@ -142,12 +141,12 @@ sectigo.com
         }
     }
 
-    app.get('/floppySnake.js', (req, res) => {
+    app.get('{/:version}/floppySnake{:version}.js', (req, res) => {
         console.log("static /floppySnake.js called")
         findFirst(".js", res);
     });
 
-    app.get('/floppySnake.css', (req, res) => {
+    app.get('{/:version}/floppySnake.css', (req, res) => {
         console.log("static /floppySnake.css called")
         findFirst(".css", res)
     })
@@ -160,6 +159,23 @@ sectigo.com
     app.get(/\/assets\/index(.*)\.css/, (req, res, next) => {
         console.log("static /assets/index.css called")
         findFirst(".css", res)
+    })
+
+    let gibberishQuote:GibberishEntry | undefined = undefined;
+
+    setInterval(async () => {
+        gibberishQuote = await GibberishInstance.createComment(30);
+        MyWebSocket.instance.broadcastGibberish();
+    }, 20 * 60 * 1000);
+
+    app.get('/gibberish/:token', async (req, res) => {
+        console.log("get random gibberish comment called");
+
+        if (!gibberishQuote) {
+            gibberishQuote = await GibberishInstance.createComment(30);
+        }
+
+        res.status(200).send(JSON.stringify(gibberishQuote));
     })
 
     app.get('/comments/:postid/all/:token', async (req, res) => {
@@ -188,9 +204,10 @@ sectigo.com
     })
 
     app.get('/comments/:postid/before/:before/:token', (req, res) => {
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
+            if (isBlacklisted || !allowPosts) {
             console.log("blacklisted get comment before called with " + JSON.stringify(req.params));
-            getOlderGibberishComments(req.params.postid)
+            getOlderGibberishComments(req.params.postid, req.params.before)
                 .then(response => {
                     res.status(200).send(response);
                 })
@@ -222,7 +239,8 @@ sectigo.com
 
     app.get('/comments/:postid/after/:after/:token', (req, res) => {
            console.log("get comment after called with " + JSON.stringify(req.params));
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted) {
+        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
+            if (isBlacklisted || !allowPosts) {
             console.log("blacklisted get comment after called with " + JSON.stringify(req.params));
             getRecentGibberishComments(req.params.postid, req.params.after)
                 .then(response => {
