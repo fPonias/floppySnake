@@ -702,6 +702,11 @@ export async function isUserBlacklisted(token:string):Promise<boolean> {
             console.log("user " + token + " matched blacklist " + JSON.stringify(related[i]))
             return true;
         }
+
+        if (related[i].countryCode != null && related[i].countryCode != 'US' && related[i].countryCode != 'GB') {
+            console.log("user " + token + " match out of country ISP " + JSON.stringify(related[i]))
+            return true;
+        }
     }
 
     return false;
@@ -738,7 +743,7 @@ export async function getRelatedUsersAndAddressesByIds(ids:string[]):Promise<any
 export async function getRelatedUsersAndAddressesByToken(token:string):Promise<any[]> {
     const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked, visitor.allowed,
 		ip.firstvisited, ip.address, ip."state", 
-		ip.city, ip.country, ip.blocked iblocked
+		ip.city, ip.country, ip.countrycode, ip.type, ip.blocked iblocked
 	FROM visitor 
 	JOIN (
 		SELECT iv.* FROM ip_visitor iv JOIN (
