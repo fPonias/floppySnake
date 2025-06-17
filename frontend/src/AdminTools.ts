@@ -29,6 +29,7 @@ export interface SubUserData {
     token: string,
     updated: number,
     blocked: boolean,
+    allowed: boolean,
     created: number | null
 }
 

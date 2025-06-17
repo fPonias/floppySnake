@@ -536,7 +536,8 @@ export interface SubUserData {
     token: string,
     updated: number,
     blocked: boolean,
-    created: number | null
+    created: number | null,
+    allowed: boolean,
 }
 
 export async function getRecentUserData(start: number): Promise<UserData[]> {
@@ -574,25 +575,17 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
         const item = userMap.get(row.origid);
         if (!item) { continue; }
         if (subUsersIndex.has(row.id)) {
-            if (row.id == row.origid) {
-                userMap.delete(row.id);
-            }
-
             continue; 
         }
 
-        const index = item.users.findIndex((line) => {return line.visitorid == row.id})
-
-        if (index == -1 || index == undefined) {
-            item.users.push({
-                visitorid: row.id,
-                token: row.token,
-                blocked: row.vblocked,
-                created: row.created,
-                updated: row.updated
-            });
-
-        }
+        item.users.push({
+            visitorid: row.id,
+            token: row.token,
+            blocked: row.vblocked,
+            created: row.created,
+            updated: row.updated,
+            allowed: row.allowed
+        });
 
         const idx = item.ipAddresses.findIndex((ipData) => { return ipData.address == row.address });
         if (idx == -1 || idx == undefined) {
@@ -672,6 +665,7 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
     for (let id of userMap.keys()) {
         const user = userMap.get(id);
         if (!user) {continue;}
+        if (user.ipAddresses.length == 0 && user.users.length == 0) { continue; } 
         userList.push(user);
     }
     return userList;
@@ -713,7 +707,7 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     const ids:number[] = [];
     for (let i = 0; i < related.length; i++) {
         ids.push(related[i].id);
-        if (related[i].vblocked || related[i].iblocked) {
+        if (related[i].vblocked || related[i].iblocked || !related[i].allowed) {
             console.log("user " + token + " matched blacklist " + JSON.stringify(related[i]))
             return BlackListType.BLOCKED;
         }
@@ -748,7 +742,9 @@ export async function getRelatedUsersAndAddressesByIds(ids:string[]):Promise<any
         return [];
     }
 
-    const text = `SELECT DISTINCT v.origid, visitor.id, visitor.token, visitor.blocked vblocked, visitor.created,
+    const text = `SELECT DISTINCT 
+        v.origid, visitor.id, visitor.token, visitor.blocked vblocked, 
+        visitor.created, visitor.allowed,
 		ip.firstvisited, ip.domain, ip.address, ip."state", 
 		ip.city, ip.countrycode, ip.blocked iblocked
 	FROM visitor 
@@ -770,7 +766,7 @@ export async function getRelatedUsersAndAddressesByIds(ids:string[]):Promise<any
 }
 
 export async function getRelatedUsersAndAddressesByToken(token:string):Promise<any[]> {
-    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked,
+    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked, visitor.allowed,
 		ip.firstvisited, ip.address, ip."state", 
 		ip.city, ip.country, ip.blocked iblocked
 	FROM visitor 
@@ -791,7 +787,7 @@ export async function getRelatedUsersAndAddressesByToken(token:string):Promise<a
 }
 
 export async function getRelatedUsersAndAddresses(ip:string):Promise<any[]> {
-    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked, 
+    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked, visitor.allowed,
     	ip.firstvisited, ip.address, ip."state", 
     	ip.city, ip.country, ip.blocked iblocked
     FROM visitor 
@@ -809,25 +805,6 @@ export async function getRelatedUsersAndAddresses(ip:string):Promise<any[]> {
 
     const result = await pool.query(text, [ip]);
     return result.rows;
-}
-
-export async function getUserAddresses(id: number[]): Promise<UserAddress[]> {
-    const text = `SELECT DISTINCT v.origid, visitor.id, visitor.token, visitor.blocked vblocked, visitor.created,
-		ip.firstvisited, ip.address, ip."state", 
-		ip.city, ip.countrycode, ip.blocked iblocked
-	FROM visitor 
-	JOIN (
-		SELECT iv.*, i.origid FROM ip_visitor iv JOIN (
-			SELECT iv.ipid, v.origid FROM ip_visitor iv JOIN (
-				SELECT iv.visitorid, v.id origid FROM ip_visitor iv
-				JOIN visitor v ON v.id = iv.visitorid
-			) v ON v.visitorid = iv.visitorid
-		) i ON i.ipid = iv.ipid		
-	) v ON v.visitorid = visitor.id
-	JOIN ip ON v.ipid = ip.id
-	WHERE v.origid IN (2158, 2028)
-	ORDER BY origid, visitor.id DESC
-    `;
 }
 
 export async function getAlias(after: number = 0):Promise<any[]> {
