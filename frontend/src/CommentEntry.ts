@@ -42,6 +42,11 @@ export default class CommentEntry {
     }
 }
 
+export interface GibberishEntry {
+    name: string,
+    message: string
+};
+
 export class CommentCountInfo {
     min: number
     count: number
@@ -101,6 +106,18 @@ export class CommentEntries {
     private async parseComment(data: Response): Promise<CommentEntry> {
         const json = await data.json();
         return new CommentEntry(json);
+    }
+
+    gibberish:GibberishEntry | undefined = undefined;
+
+    async updateGibberish(): Promise<GibberishEntry | null> {
+        const url = env.api + "/gibberish/" + this.apiToken;
+        const res = await fetch(url);
+        if (!res) { return null }
+
+        const json = await res.json();
+        this.gibberish = {name:json.name, message: json.message};
+        return this.gibberish;
     }
 
     async sortTree() {

@@ -15,7 +15,6 @@ import {
     getPost,
     createPost,
     flagComment,
-    getUserData,
     getRecentUserData,
     getAlias,
     updateAlias,
@@ -27,13 +26,13 @@ import {
     blockIP,
     isUserBlacklisted,
     getRelatedUsersAndAddressesByIds,
-    getRelatedUsersAndAddressesByToken,
     getRelatedUsersAndAddresses,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
 import { authorize, isAuthorized } from './adminKey';
 import { filterString, isBlacklisted } from './filter';
+import { GibberishInstance, GibberishEntry } from './Gibberish';
 
 const env = (env2.default) ? env2.default : env2;
 let allowPosts = true;
@@ -161,6 +160,23 @@ sectigo.com
         findFirst(".css", res)
     })
 
+    let gibberishQuote:GibberishEntry | undefined = undefined;
+
+    setInterval(async () => {
+        gibberishQuote = await GibberishInstance.createComment(30);
+        MyWebSocket.instance.broadcastGibberish();
+    }, 20 * 60 * 1000);
+
+    app.get('/gibberish/:token', async (req, res) => {
+        console.log("get random gibberish comment called");
+
+        if (!gibberishQuote) {
+            gibberishQuote = await GibberishInstance.createComment(30);
+        }
+
+        res.status(200).send(JSON.stringify(gibberishQuote));
+    })
+
     app.get('/comments/:postid/all/:token', (req, res) => {
         console.log("get comments called with " + JSON.stringify(req.params));
         isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted || !allowPosts) {
@@ -187,7 +203,7 @@ sectigo.com
         isUserBlacklisted(req.params.token).then((isBlacklisted) => {
             if (isBlacklisted || !allowPosts) {
             console.log("blacklisted get comment before called with " + JSON.stringify(req.params));
-            getOlderGibberishComments(req.params.postid)
+            getOlderGibberishComments(req.params.postid, req.params.before)
                 .then(response => {
                     res.status(200).send(response);
                 })
@@ -405,6 +421,7 @@ sectigo.com
         const url = atob(req.params.url);
         getPost(url)
             .then(response => {
+                gibberishPostId = response;
                 res.status(200).send(JSON.stringify({ id: response }));
             })
             .catch(error => {

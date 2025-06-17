@@ -212,6 +212,8 @@ function App() {
             } else if (data.action == "refresh") {
                 appContext.commentBackend?.reset();
                 firstLoad();
+            } else if (data.action == "gibberish") {
+                appContext.commentBackend?.updateGibberish();
             }
         },
     });
@@ -311,6 +313,7 @@ function App() {
         await appContext.commentBackend?.getPost();
         await appContext.commentBackend?.getRecent();
         await appContext.commentBackend?.sortTree();
+        await appContext.commentBackend?.updateGibberish();
 
         await appContext.visitorBackend?.fetchNewest();
 
@@ -445,9 +448,24 @@ function App() {
         </div>)
     }
 
+    function renderSnakeQuote() {
+        if (!appContext.commentBackend?.gibberish) {
+            return (<></>)
+        }
+
+        const gibberish = appContext.commentBackend?.gibberish;
+        return (
+            <div className="snakeQuote">
+                <div>Quote of the hour</div>
+                <div style={{fontStyle: 'italic'}}>{gibberish.message}</div>
+            </div>
+        )
+    }
+
     return (<div className='outer'>
         {renderAdminPanel()}
         {renderCommentCount()}
+        {renderSnakeQuote()}
         <FormComponent onAdminEnabled={(_) => onAdminEnabled()} />
         <div className='comments'>
             {renderComments(0, comments)}

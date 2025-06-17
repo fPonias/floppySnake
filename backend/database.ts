@@ -31,6 +31,9 @@ export const getTopGibberishComments = async (postid: number): Promise<any[]> =>
         const ret = await getTopComments(postid);
         for (let row of ret) {
             const gibberish = GibberishInstance.getComment(row.id);
+
+            if (!gibberish) { throw new Error("Could not received Gibberish " + row.id) }
+
             row.name = gibberish.name;
             row.comment = gibberish.message;
             row.original = "";
@@ -111,6 +114,8 @@ export const getCommentGibberish = async(id:number):Promise<any> => {
     try {
         const ret = await getComment(id);
         const gibberish = GibberishInstance.getComment(ret.id);
+        if (!gibberish) { throw new Error("Internal server error")}
+
         ret.name = gibberish.name;
         ret.comment = gibberish.message;
         ret.original = "";
@@ -352,8 +357,7 @@ export async function getCommentCount(postid: number):Promise<CommentCountInfo |
 export async function getPost(url: string):Promise<number | null> {
     try {
         const result = await pool.query("SELECT id FROM post WHERE url = $1", [url]);
-        console.log("post response " + JSON.stringify(result.rows));
-
+        
         if (result.rows.length > 0) {
             return result.rows[0].id;
         } else { 
@@ -543,11 +547,10 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
     `;
     let result = await pool.query(text, [start]);
 
-    const userList:UserData[] = [];
-    const ids:number[] = [];
+    const ids:string[] = [];
     const userMap:Map<number, UserData> = new Map();
     for (let row of result.rows) {
-        const item:SubUserData = {
+        const item:UserData = {
             visitorid: row.id,
             token: row.token,
             alias: row.alias,
@@ -559,9 +562,8 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
             users: [],
             names: [],
             isActive: false,
-            blocked: false
         }
-        userList.push(item);
+
         ids.push(row.id);
         userMap.set(row.id, item);
     }
@@ -571,6 +573,17 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
     for (let row of collatedUserData) {
         const item = userMap.get(row.origid);
         if (!item) { continue; }
+        console.log("related user row " + JSON.stringify(row));
+        if (subUsersIndex.has(row.id)) {
+            console.log("indexed users has " + row.id);
+            if (row.id == row.origid) {
+                console.log("previously analyzed user found ... removing");
+                userMap.delete(row.id);
+            }
+
+            continue; 
+        }
+
         const index = item.users.findIndex((line) => {return line.visitorid == row.id})
 
         if (index == -1 || index == undefined) {
@@ -578,8 +591,10 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
                 visitorid: row.id,
                 token: row.token,
                 blocked: row.vblocked,
-                created: row.created
+                created: row.created,
+                updated: row.updated
             });
+
         }
 
         const idx = item.ipAddresses.findIndex((ipData) => { return ipData.address == row.address });
@@ -599,8 +614,10 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
             item.ipAddresses[idx].state = row.state;
         }
 
-        subUsersIndex.set(row.visitorid, row.origid);
+        subUsersIndex.set(row.id, row.origid);
     }
+
+
 
     text = `SELECT c.count, f.flagged, p.lastpost, v.id as visitorid
 		FROM visitor v
@@ -613,7 +630,9 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
     result = await pool.query(text, []);
 
     for (let row of result.rows) {
-        const item = userMap.get(row.visitorid);
+        const key = subUsersIndex.get(row.visitorid);
+        if (!key) { continue; }
+        const item = userMap.get(key);
         if (!item) { continue; }
 
         if (row.count != null) {
@@ -636,11 +655,28 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
         ) { 
             continue 
         }
-        const item = userMap.get(namePair.visitorid);
-        if (item == undefined) {continue}
-        item.names.push(namePair.name);
+
+        const key = subUsersIndex.get(namePair.visitorid);
+        if (!key) { continue; }
+        const item = userMap.get(key);
+        if (!item) { continue; }
+        
+        const trimmed = namePair.name.trim().toLowerCase();
+        const idx = item.names.findIndex((value) => {
+            const mod = value.trim().toLowerCase();
+            return mod == trimmed
+        });
+        if (idx == -1) {
+            item.names.push(namePair.name);
+        }
     }
 
+    const userList: UserData[] = [];
+    for (let id of userMap.keys()) {
+        const user = userMap.get(id);
+        if (!user) {continue;}
+        userList.push(user);
+    }
     return userList;
 }
 
