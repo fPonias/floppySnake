@@ -205,11 +205,6 @@ export default function MapView() {
         };
     }
 
-    function dateToAgo(date: number): string {
-        const dt = new Date(date);
-        return dt.toString();
-    }
-
     async function setBestOf(commentid: number, bestof: boolean) {
         if (appContext.adminBackend?.adminToken == null) {
             return;
@@ -248,9 +243,8 @@ export default function MapView() {
             {comments.map((localComment) => {
                 const indent = 20;
                 let commentClass = "comment";
-                const name = (localComment.name) ? localComment.name : "anon";
+                const name = (localComment.name && localComment.name.trim().length > 0) ? localComment.name : "anon";
                 let nameClass = "name"
-                const time = dateToAgo(localComment.posted);
                 
                 return (
                     <div className={commentClass} key={"comment-" + localComment.id} id={localComment.id.toString()} 
@@ -266,7 +260,6 @@ export default function MapView() {
                                 <span className={nameClass}>
                                     {(appContext.adminEnabled) ? (<span>{localComment.visitorid} -</span>) : <></>}
                                     {name}</span>
-                                <span className='time'>{time}</span>
                             </div>
                             {localComment.comment}
                         </div>
