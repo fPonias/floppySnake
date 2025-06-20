@@ -29,7 +29,7 @@ export default function MapView() {
 
             map.current = new Map(document.getElementById("map"), {
                 center: { lat: 38.7946, lng: -106.5348 },
-                zoom: 3,
+                zoom: 1,
                 mapId: "MX_Connections"
             });
         }
@@ -161,6 +161,7 @@ export default function MapView() {
     }
 
     async function renderMarkers() {
+	// @ts-ignore
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary; 
         
         if (infoWindow.current == null) {
