@@ -16,10 +16,6 @@ export const AdminPanel:React.FC<AdminProps> = ({
 }:AdminProps) => {
     const [selected, setSelected] = useState(0);
 
-    function openMap() {
-        
-    }
-
     const tabs = useRef<Tab[]>([
         { name: "Admin", content: () => {return (<AdminMain  />)}},
         { name: "Filters", content: () => {return (<AdminFilters />)}},

@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import env from "../../env"
 import { AppContext } from "./App"; 
 import './Map.css'
@@ -12,9 +12,10 @@ export default function MapView() {
     const [selected, setSelected] = useState<number>(0);
     const map = useRef<any>(null);
     const userIds = useRef<Map<Number, Set<Number>>>(new Map());
-    const [update, setUpdate] = useState<number>(0);
+    const [_, setUpdate] = useState<number>(0);
 
     useMount(() => {
+        // @ts-ignore
         (g => { var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__", m = document, b = window; b = b[c] || (b[c] = {}); var d = b.maps || (b.maps = {}), r = new Set, e = new URLSearchParams, u = () => h || (h = new Promise(async (f, n) => { await (a = m.createElement("script")); e.set("libraries", [...r] + ""); for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]); e.set("callback", c + ".maps." + q); a.src = `https://maps.${c}apis.com/maps/api/js?` + e; d[q] = f; a.onerror = () => h = n(Error(p + " could not load.")); a.nonce = m.querySelector("script[nonce]")?.nonce || ""; m.head.append(a) })); d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n)) })({
             key: "AIzaSyAZCjFTnKzJ6-eVIzN0dWGxi9Jszz8aQHM",
             v: "weekly",
@@ -23,6 +24,7 @@ export default function MapView() {
         });
 
         async function initMap() {
+            // @ts-ignore
             const { Map } = await google.maps.importLibrary("maps");
 
             map.current = new Map(document.getElementById("map"), {
@@ -115,29 +117,6 @@ export default function MapView() {
         }
     }, [selected]);
 
-    function updatePoints(data: any[]) {
-        const tagSet = new Set<number>();
-        tags.current = [];
-
-        const sz = data.length;
-        for (let i = 0; i < sz; i++) {
-            const line = data[i];
-            let list = index.current.get(line.origid);
-            if (!list) {
-                list = [];
-                index.current.set(line.origid, list);
-                tagSet.add(line.origid);
-            }
-
-
-            list.push(line);
-        }
-
-        for (let tag of tagSet) {
-            tags.current.push(tag)
-        }
-    };
-
     function renderSelector() {
         return (
             <div style={{marginBottom: 20}}>
@@ -185,6 +164,7 @@ export default function MapView() {
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary; 
         
         if (infoWindow.current == null) {
+            // @ts-ignore
             const { InfoWindow } = await google.maps.importLibrary("maps")            
             infoWindow.current = new InfoWindow();
         }
@@ -203,7 +183,8 @@ export default function MapView() {
                 marker = new AdvancedMarkerElement({});
                 marker.gmpClickable = true;
                 marker.id = "marker-" + i;
-                marker.addEventListener("gmp-click", (evt) => {
+                marker.addEventListener("gmp-click", (evt: Event) => {
+                    // @ts-ignore
                     const id = evt.target?.id;
                     if (id == null || id.length < 7) { return; }
                     const idx = Number.parseInt(id.substring(7));
@@ -244,7 +225,7 @@ export default function MapView() {
 
         let url = env.api + "/comment/bestOf/" + comment.id + "/" + appContext.adminBackend.adminToken;
 
-        const res = await fetch(url, {
+        await fetch(url, {
             method: 'POST',
             credentials: "include",
             headers: {
@@ -257,7 +238,6 @@ export default function MapView() {
     }
 
     function renderQuotes() {
-        const updated = update;
         const id = tags.current[selected];
         const comments = commentIndex.current.get(id);
 
