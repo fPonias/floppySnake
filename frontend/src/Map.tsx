@@ -13,6 +13,7 @@ export default function MapView() {
     const map = useRef<any>(null);
     const userIds = useRef<Map<Number, Set<Number>>>(new Map());
     const [_, setUpdate] = useState<number>(0);
+    const ALLOW_ADMIN = false;
 
     useMount(() => {
         // @ts-ignore
@@ -51,7 +52,7 @@ export default function MapView() {
         }
 
         let url = env.api + "/commentData";
-        if (appContext.adminBackend?.adminToken != null) {
+        if (ALLOW_ADMIN && appContext.adminBackend?.adminToken != null) {
             url += "/" + appContext.adminBackend.adminToken;
         }
 
@@ -144,7 +145,7 @@ export default function MapView() {
         if (nines == undefined || nines.length <= idx) { return }
 
         const data = nines[idx];
-        const ids = (appContext.adminEnabled) ? `${data.visitorid} ipid: ${data.id}<br />` : "";
+        const ids = (ALLOW_ADMIN && appContext.adminEnabled) ? `${data.visitorid} ipid: ${data.id}<br />` : "";
         infoWindow.current.setContent(`
                         <div>
                             ${ids}
@@ -207,7 +208,7 @@ export default function MapView() {
     }
 
     async function setBestOf(commentid: number, bestof: boolean) {
-        if (appContext.adminBackend?.adminToken == null) {
+        if (!ALLOW_ADMIN || appContext.adminBackend?.adminToken == null) {
             return;
         }
 
@@ -253,13 +254,13 @@ export default function MapView() {
                     >
                         <div className="commentLeft">
                             <div className='header'>
-                                {(appContext.adminEnabled) ? (
+                                {(ALLOW_ADMIN && appContext.adminEnabled) ? (
                                     <input type="checkbox" onClick={
                                         () => {setBestOf(localComment.id, !localComment.bestof)}
                                     } checked={localComment.bestof}></input>
                                 ) : <></>}
                                 <span className={nameClass}>
-                                    {(appContext.adminEnabled) ? (<span>{localComment.visitorid} -</span>) : <></>}
+                                    {(ALLOW_ADMIN && appContext.adminEnabled) ? (<span>{localComment.visitorid} -</span>) : <></>}
                                     {name}</span>
                             </div>
                             {localComment.comment}
