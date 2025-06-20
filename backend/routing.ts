@@ -27,6 +27,10 @@ import {
     isUserBlacklisted,
     getRelatedUsersAndAddressesByIds,
     getRelatedUsersAndAddresses,
+    getComments,
+    getRelatedUsersAndAddressesByWhere,
+    getUserComments,
+    markCommentBestOf,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -656,5 +660,104 @@ sectigo.com
 
         res.status(200).send("success");
         MyWebSocket.instance.broadcastBlocked(now);
+    })
+
+    app.get("/ipData.json", async (req, res) => {
+        console.log("ipData called");
+        fs.readFile("./ipData.json", { encoding: 'utf8' }, (err, data) => {
+            res.status(200).send(data);
+        });
+    })
+
+    const locations = [
+        "city IN ('City of Syracuse', 'Town of Lake Luzerne')",
+        "domain = 'm247.ro' or city IN ('Grants Pass', 'Hillsboro')",
+        "(city = 'Phoenix' AND domain != 'gslnetworks.com.au') OR domain = 'aws.com'",
+        `iv.visitorid != 83 AND (ip.id = 502 or city = 'Orillia' or 
+            (domain = 'packethub.net' AND (country = 'Canada' or city = 'Buffalo')) OR 
+            country = 'Estonia')
+        `,
+        "state = 'South Carolina'"
+    ]
+
+    app.get("/ip/all{/:token}", async (req, res) => {
+        console.log("ip list called");
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+        
+        const ret: any[] = [];
+
+        for (let cityList of locations) {
+            console.log("querying city " + cityList);
+            const userData = await getRelatedUsersAndAddressesByWhere(cityList);
+
+            if (userData.length == 0) { continue ;} 
+            const origid = userData[0].visitorid;
+            const arr: any[] = [];
+
+            const ids:number[] = [];
+            for (let line of userData) {
+                ids.push(line.visitorid);
+                line.origid = origid;
+                arr.push(line);
+
+                ids.push(line.visitorid);
+            }
+
+            //const commentList = await getUserComments(ids, true);
+            ret.push({userData: arr});
+        }
+
+        res.status(200).send(JSON.stringify(ret));
+    })
+
+    app.post("/commentData{/:token}", async (req, res) => {
+        console.log("comment list for users called");
+
+        const parts = req.body;
+        const idList:number[] = [];
+        for (let part of parts) {
+            const num = Number.parseInt(part);
+            if (num != undefined) {
+                idList.push(num);
+            }
+        }
+
+        const isAuth = isAuthorized(req);
+        let ret = await getUserComments(idList, isAuth);
+
+        res.status(200).send(JSON.stringify(ret));
+    });
+
+    app.get("/commmentData/all{/:token}", async (req, res) => {
+        console.log("comment list called");
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        const ret = await getComments();
+        res.status(200).send(JSON.stringify(ret));
+    })
+
+    app.post("/comment/bestOf/:id{/:token}", async (req, res) => {
+        console.log("comment best of called for " + req.params.id);
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        const bestof = req.body.value;
+        await markCommentBestOf(req.params.id, bestof);
+
+        res.status(200).send(JSON.stringify("success"));
     })
 }
