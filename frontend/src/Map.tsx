@@ -1,6 +1,7 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import env from "../../env"
-import { AppContext } from "./App";
+import { AppContext } from "./App"; 
+import './Map.css'
 import useMount from "./useMount";
 
 
@@ -164,9 +165,10 @@ export default function MapView() {
         if (nines == undefined || nines.length <= idx) { return }
 
         const data = nines[idx];
+        const ids = (appContext.adminEnabled) ? `${data.visitorid} ipid: ${data.id}<br />` : "";
         infoWindow.current.setContent(`
                         <div>
-                            vid: ${data.visitorid} ipid: ${data.id}<br/>
+                            ${ids}
                             city: ${data.city}<br/>
                             state: ${data.state}<br/>
                             domain: ${data.domain}<br/>
@@ -223,33 +225,8 @@ export default function MapView() {
     }
 
     function dateToAgo(date: number): string {
-        const min = 60;
-        const hour = min * 60;
-        const day = hour * 24;
-        const long = day * 30;
-
-        const now = new Date().getTime();
-        const diff = Math.max(0, now - date) / 1000;
-
-        if (diff <= 15) {
-            return "just now";
-        } else if (diff <= min) {
-            return Math.floor(diff) + " seconds ago";
-        } else if (diff <= hour) {
-            const hr = Math.floor(diff / min);
-            if (hr == 1) { return "1 minute ago"; }
-            else { return hr + " minutes ago" };
-        } else if (diff <= day) {
-            const dy = Math.floor(diff / hour);
-            if (dy == 1) { return "1 hour ago" }
-            else { return dy + " hours ago" }
-        } else if (diff <= long) {
-            const mo = Math.floor(diff / day);
-            if (mo == 1) { return "1 day ago" }
-            else { return mo + " days ago" }
-        } else {
-            return "long ago";
-        }
+        const dt = new Date(date);
+        return dt.toString();
     }
 
     async function setBestOf(commentid: number, bestof: boolean) {
