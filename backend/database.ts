@@ -716,12 +716,12 @@ export async function isUserBlacklisted(token:string):Promise<boolean> {
     const related = await getRelatedUsersAndAddressesByToken(token);
 
     for (let i = 0; i < related.length; i++) {
-        if (related[i].vblocked || related[i].iblocked || !related[i].allowed) {
+        if (related[i].vblocked || related[i].iblocked ){//|| !related[i].allowed) {
             console.log("user " + token + " matched blacklist " + JSON.stringify(related[i]))
             return true;
         }
 
-        if (related[i].countryCode != null && related[i].countryCode != 'US' && related[i].countryCode != 'GB') {
+        if (related[i].countrycode != null && related[i].countrycode != 'US' && related[i].countrycode != 'GB') {
             console.log("user " + token + " match out of country ISP " + JSON.stringify(related[i]))
             return true;
         }
