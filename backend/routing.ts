@@ -677,17 +677,13 @@ sectigo.com
             (domain = 'packethub.net' AND (country = 'Canada' or city = 'Buffalo')) OR 
             country = 'Estonia')
         `,
-        "state = 'South Carolina'"
+        "state = 'South Carolina'",
+        "iv.visitorid = 13 or iv.visitorid = 367"
     ]
 
     app.get("/ip/all{/:token}", async (req, res) => {
         console.log("ip list called");
 
-        if (!isAuthorized(req)) {
-            console.log("auth failed");
-            res.status(401).send();
-            return;
-        }
         
         const ret: any[] = [];
 
