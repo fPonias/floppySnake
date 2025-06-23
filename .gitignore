@@ -24,11 +24,9 @@ dist-ssr
 *.sw?
 
 .DS_Store
-
-env-real.js
-env.js
-env.ts
+schema2.sql
+env*.*
 ip-blacklist.txt
 
-*live-backup*
-*.sql
+backups/*
+iplookup-sample.txt
