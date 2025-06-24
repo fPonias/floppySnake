@@ -319,6 +319,7 @@ export default function MapView() {
 
         const duration = 24 * 60 * 60 * 1000;
         const idx = search(selectedDate - duration, selectedDate);
+        // @ts-ignore
         const rendered = new Map<string, google.maps.Circle>();
         let count = 0;
 
@@ -333,6 +334,7 @@ export default function MapView() {
                 marker = circles.current[count];
                 count += 1;
             } else {
+                // @ts-ignore
                 marker = new google.maps.Circle({
                     strokeColor: "#FF0000",
                     strokeWeight: 2,
