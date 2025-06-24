@@ -190,10 +190,10 @@ export default function MapView() {
         const dateStr = new Date(selectedDate).toDateString();
 
         return (
-        <div className="dateSlider">
+        <div className="dateSlider" style={{marginBottom: 20}}>
             <div className="currentDateLabel">{dateStr}</div>
             <div style={{ display: "flex", flexDirection: "row" }}>
-                <button onClick={() => {
+                <button style={{width: 80}} onClick={() => {
                     togglePlayback(!isPlaying)
                 }}>play</button>
                 <input type="range" min={dateRange.min} max={dateRange.max} value={selectedDate} className="slider" onChange={(evt) => {
@@ -207,7 +207,7 @@ export default function MapView() {
 
     function renderSelector() {
         return (
-            <div style={{marginBottom: 20}}>
+            <div style={{marginBottom: 20, marginTop: 20}}>
                 <select onChange={(elem) => {setSelected(elem.currentTarget.selectedIndex)}}>
                     {tags.current.map((line, idx) => {return (
                         <option selected={selected == idx}>{line}</option>
@@ -477,7 +477,7 @@ export default function MapView() {
 
     return (<>
         {renderTimeline()}
-        <div style={{ width: 800, height: 600 }} id="map" />
+        <div style={{ width: 600, height: 400 }} id="map" />
         {renderSelector()}
         {renderQuotes()}
     </>)
