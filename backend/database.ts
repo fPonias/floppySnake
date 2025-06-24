@@ -716,7 +716,7 @@ export async function isUserBlacklisted(token:string):Promise<boolean> {
     const related = await getRelatedUsersAndAddressesByToken(token);
 
     for (let i = 0; i < related.length; i++) {
-        if (related[i].vblocked || related[i].iblocked || !related[i].allowed) {
+        if (related[i].vblocked || related[i].iblocked ){//|| !related[i].allowed) {
             console.log("user " + token + " matched blacklist " + JSON.stringify(related[i]))
             return true;
         }
