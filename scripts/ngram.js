@@ -3,69 +3,11 @@ import { open } from 'node:fs/promises';
 
 const dir = "./backups";
 const data = fs.readFileSync(dir + "/comments.csv", { encoding: 'utf8' });
-let index = 0;
-
-const EntryState = {
-    START: 0,
-    QUOTE: 1,
-    QUOTED: 2,
-    UNQUOTED: 3
-}
-
-function readEntry() {
-    let state = EntryState.START;
-    let ret = "";
-
-    while (index < data.length) {
-        const ch = data[index];
-        switch (state) {
-            case EntryState.START:
-                if (ch == '"') {
-                    state = EntryState.QUOTE;
-                } else if (ch == ',' || ch == '\n') {
-                    index += 1;
-                    return "";
-                } else {
-                    ret += ch;
-                    state = EntryState.UNQUOTED;
-                }
-                break;
-            case EntryState.UNQUOTED:
-                if (ch == "," || ch == '\n') {
-                    index += 1;
-                    return ret;
-                } else {
-                    ret += ch;
-                }
-                break;
-            case EntryState.QUOTE:
-                if (ch == "'") {
-                    state = EntryState.QUOTED;
-                } else if (ch == '"') {
-                    state = EntryState.UNQUOTED;
-                }else {
-                    ret += ch;
-                }
-                break;
-            case EntryState.QUOTED:
-                if (ch == ',' || ch == '\n') {
-                    index += 1;
-                    return ret;
-                } else {
-                    ret += ch;
-                    state = EntryState.QUOTE;
-                }
-                break;
-        }
-        index += 1;
-    }
-
-    return ret;
-}
+const reader = new CSVReader(data);
 
 function readLine() {
-    let name = readEntry();
-    let comment = readEntry(); 
+    let name = reader.readEntry();
+    let comment = reader.readEntry(); 
     return {name: name, comment: comment};
 }
 

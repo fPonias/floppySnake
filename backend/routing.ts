@@ -669,6 +669,13 @@ sectigo.com
         });
     })
 
+    app.get("/historyParsed.json", async (req, res) => {
+        console.log("history-parsed called");
+        fs.readFile("./historyParsed.json", { encoding: 'utf8'}, (err, data) => {
+            res.status(200).send(data);
+        })
+    })
+
     const locations = [
         "city IN ('City of Syracuse', 'Town of Lake Luzerne')",
         "domain = 'm247.ro' or city IN ('Grants Pass', 'Hillsboro')",

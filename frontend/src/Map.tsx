@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import env from "../../env"
 import { AppContext } from "./App"; 
 import './Map.css'
@@ -10,6 +10,9 @@ export default function MapView() {
 
     const [loading, setLoading] = useState<boolean>(false);
     const [selected, setSelected] = useState<number>(0);
+    const [dateRange, setDateRange] = useState<{ min: number, max: number }>({ min: 0, max: 0 });
+    const [selectedDate, setSelectedDate] = useState<number>(0);
+    const [isPlaying, setIsPlaying] = useState(false);
     const map = useRef<any>(null);
     const userIds = useRef<Map<Number, Set<Number>>>(new Map());
     const [_, setUpdate] = useState<number>(0);
@@ -69,44 +72,70 @@ export default function MapView() {
         return json;
     }
 
+    async function loadLocationsData() {
+        const url = env.api + "/ipData.json";
+        const res = await fetch(url);
+        const json = await res.json();
+
+        for (let item of json) {
+            const origid = item.userData[0].visitorid;
+            tags.current.push(origid)
+            index.current.set(origid, item.userData);
+            //commentIndex.current.set(origid, item.comments);
+
+            const ids = new Set<Number>();
+            userIds.current.set(origid, ids);
+            for (let data of item.userData) {
+                ids.add(data.visitorid);
+            }
+
+            const comments = await fetchComments(origid);
+            commentIndex.current.set(origid, comments);
+        }
+    }
+
+    async function loadTimelineData() {
+        const url = env.api + "/historyParsed.json";
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (json.length == 0) { return; }
+
+        let date = new Date(json[0].timestamp);
+        date.setHours(0, 0, 0, 0);
+        let min = date.getTime();
+        
+        date = new Date(json[json.length - 1].timestamp + 24 * 60 * 60 * 1000);
+        date.setHours(0, 0, 0, 0);
+        let max = date.getTime();
+        
+        setDateRange({min: min, max: max});
+        setSelectedDate(min);
+        timelineIndex.current = json;
+    }
+
     useEffect(() => {
         if (index.current.size > 0 || loading) { return; }
         setLoading(true);
 
         const delayed = async () => {
-            const url = env.api + "/ipData.json";
-            const res = await fetch(url);
-            const json = await res.json();
-
-            for (let item of json) {
-                const origid = item.userData[0].visitorid;
-                tags.current.push(origid)
-                index.current.set(origid, item.userData);
-                //commentIndex.current.set(origid, item.comments);
-
-                const ids = new Set<Number>();
-                userIds.current.set(origid, ids);
-                for (let data of item.userData) {
-                    ids.add(data.visitorid);
-                }
-
-                const comments = await fetchComments(origid);
-                commentIndex.current.set(origid, comments);
-            }
+            await loadLocationsData();
+            await loadTimelineData();
 
             setLoading(false);
 
-            renderMarkers();
+            //renderMarkers();
         }
         delayed();
     }, [appContext.adminBackend?.adminToken, loading]);
 
     useEffect(() => {
-        renderMarkers();
-    }, [selected]);
+        renderTimelineMarkers();
+    }, [selected, selectedDate]);
 
     const index = useRef<Map<Number, any[]>>(new Map());
     const commentIndex = useRef<Map<Number, any[]>>(new Map());
+    const timelineIndex = useRef<any[]>([]);
     const tags = useRef<number[]>([]);
     const selectedRef = useRef<number>(0);
 
@@ -117,6 +146,64 @@ export default function MapView() {
             infoWindow.current.close();
         }
     }, [selected]);
+
+    function togglePlayback(setting:boolean) {
+        setIsPlaying(setting);
+    }
+
+    const playbackLoop = useRef<any>(null);
+
+    useEffect(() => {
+        if (playbackLoop.current && !isPlaying) {
+            clearInterval(playbackLoop.current);
+            playbackLoop.current = null;
+            return;
+        }
+
+        if (!isPlaying) {
+            return;
+        }
+
+        playbackLoop.current = setInterval(() => {
+            let next = selectedDate + 1 * 60 * 60 * 1000;
+            if (next >= dateRange.max) {
+                setIsPlaying(false);
+                next = dateRange.min;
+            }
+            setSelectedDate(next);
+        }, 25);
+
+        return (() => {
+            if (playbackLoop.current) {
+                clearInterval(playbackLoop.current)
+                playbackLoop.current = null;
+            }
+        })
+    }, [isPlaying, selectedDate, dateRange])
+
+    function renderTimeline() {
+        //const dateMin = new Date(dateRange.min).toString();
+        //const dateMax = new Date(dateRange.max).toString();
+        if (timelineIndex.current.length == 0) { return (<></>) }
+        if (selectedDate < dateRange.min || selectedDate > dateRange.max) { return (<></>) }
+
+        const dateStr = new Date(selectedDate).toDateString();
+
+        return (
+        <div className="dateSlider">
+            <div className="currentDateLabel">{dateStr}</div>
+            <div style={{ display: "flex", flexDirection: "row" }}>
+                <button onClick={() => {
+                    togglePlayback(!isPlaying)
+                }}>play</button>
+                <input type="range" min={dateRange.min} max={dateRange.max} value={selectedDate} className="slider" onChange={(evt) => {
+                    const selected = evt.target.value;
+                    setSelectedDate(Number.parseInt(selected));
+                }}></input>
+            </div>
+        </div>
+        )
+    }
 
     function renderSelector() {
         return (
@@ -132,11 +219,13 @@ export default function MapView() {
                 <button style={{marginLeft: 20}} onClick={() => {
                     setSelected(Math.min(tags.current.length - 1, selected + 1))}
                 }>next</button>
+                
             </div>
         )
     }
 
     const markers = useRef<any[]>([]);
+    const circles = useRef<any[]>([]);
     const infoWindow = useRef<any>(null);
 
     function openInfoWindow(target: any, idx: number) {
@@ -159,6 +248,118 @@ export default function MapView() {
             anchor: target,
             map,
         });
+    }
+
+    function search(start: number, end: number): {start: number, range: number} {
+        let left = 0;
+        let right = timelineIndex.current.length - 1;
+        let mid = 0;
+        while (left < right) {
+            mid = (right - left) / 2 + left;
+            mid = Math.floor(mid);
+
+            const mv = timelineIndex.current[mid].timestamp;
+
+            if (mv > start) {
+                if (right > mid) {
+                    right = mid;
+                } else {
+                    right -= 1;
+                }
+            } else {
+                if (left < mid) {
+                    left = mid;
+                } else {
+                    left += 1;
+                }
+            } 
+        }
+
+        while (true) {
+            const mv = timelineIndex.current[mid].timestamp;
+            if (mv >= start) {
+                if (mid == 0) { break; }
+                mid -= 1;
+            } else {
+                break;
+            }
+        }
+
+        const retStart = mid;
+        mid += 1
+        while (true) {
+            const mv = timelineIndex.current[mid].timestamp;
+            if (mv > end) { 
+                mid -= 1;
+                break; 
+            }
+
+            if (mid == timelineIndex.current.length - 1) { break; }
+            mid += 1;
+        }
+
+        return {start: retStart, range: mid};
+    }
+
+    async function renderTimelineMarkers() {
+        // @ts-ignore
+        const { Circle } = await google.maps.importLibrary("maps")
+
+        if (infoWindow.current == null) {
+            // @ts-ignore
+            const { InfoWindow } = await google.maps.importLibrary("maps")
+            infoWindow.current = new InfoWindow();
+        }
+
+        if (timelineIndex.current.length == 0) { return; }
+
+        for (let i = 0; i < circles.current.length; i++) {
+            circles.current[i].setMap(null)
+        };
+
+        const duration = 24 * 60 * 60 * 1000;
+        const idx = search(selectedDate - duration, selectedDate);
+        const rendered = new Map<string, google.maps.Circle>();
+        let count = 0;
+
+        for (let i = idx.start; i < idx.range; i++) {
+            const data = timelineIndex.current[i];
+            const key = data.city + data.state + data.country;
+
+            let marker;
+            if (rendered.has(key)) {
+                marker = rendered.get(key);
+            } else if (circles.current.length > count) {
+                marker = circles.current[count];
+                count += 1;
+            } else {
+                marker = new google.maps.Circle({
+                    strokeColor: "#FF0000",
+                    strokeWeight: 2,
+                    fillColor: "#FF0000",
+                });
+                circles.current.push(marker);
+                count += 1;
+            }
+
+            const diff = 1 - (Math.max(0, (selectedDate - data.timestamp)) / duration);
+
+            rendered.set(key, marker);
+            marker.setMap(map.current);
+            marker.setCenter({
+                lat: data.lat,
+                lng: data.lon
+            });
+            marker.setRadius(100000);
+            marker.setOptions({
+                strokeOpacity: 0.9 * diff,
+                fillOpacity: 0.6 * diff
+            });
+        }
+
+        for (let i = 0; i < markers.current.length; i++) {
+            markers.current[i].setMap(null);
+        }
     }
 
     async function renderMarkers() {
@@ -272,8 +473,9 @@ export default function MapView() {
     }
 
     return (<>
+        {renderTimeline()}
+        <div style={{ width: 800, height: 600 }} id="map" />
         {renderSelector()}
-        <div style={{width: 800, height: 600}} id="map"/>
         {renderQuotes()}
     </>)
 }

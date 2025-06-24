@@ -9,10 +9,9 @@ const pool = new Pool(env.dbArgs);
 const folderPath = '../backups/logs';
 
 function getMonthFromString(mon) {
-    return new Date(Date.parse(mon + " 1, 2012")).getMonth() + 1
+    return new Date(Date.parse(mon + " 1, 2012")).getMonth();
 }
 
-//::ffff:209.51.14.206 - - [06/Apr/2025:19:58:32 +0000] "GET /assets/index-BWDXU0YU.js HTTP/1.1" 200 202825
 async function analyzeLine(line) {
     if (line.length == 0) { return; }
 

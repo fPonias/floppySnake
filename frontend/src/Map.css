@@ -237,10 +237,32 @@
     display: block;
 }
 
+#minusOneMap .filterList {
+    display: flex;
+    flex-direction: row;
+}
+
 #minusOneMap .filterList .filter {
     border: 1px solid grey;
+    flex: 1;
 }
 
 #minusOneMap .filterList .filter button {
     padding: 6px 10px;
+    flex: 1;
+}
+
+#minusOneMap .dateSlider {
+    background: white;
+    margin-left: 20px;
+    flex: 2;
+    width: 400px;
+}
+
+#minusOneMap .dateSlider .currentDateLabel {
+    text-align: center;
+}
+#minusOneMap .dateSlider .slider {
+    width: 400px;
+    margin: 0px 20px;
 }
