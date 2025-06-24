@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import env from "../../env"
 import { AppContext } from "./App"; 
 import './Map.css'
@@ -362,6 +362,7 @@ export default function MapView() {
         }
     }
 
+    // @ts-ignore
     async function renderMarkers() {
 	// @ts-ignore
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary; 
