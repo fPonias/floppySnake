@@ -733,6 +733,7 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     const related = await getRelatedUsersAndAddressesByToken(token);
     const ids:number[] = [];
     let allowed = false;
+    let count = 0;
     let visitorid:number | null = null;
     for (let i = 0; i < related.length; i++) {
         if (related[i].vblocked || related[i].iblocked) {
@@ -752,6 +753,8 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
         if (related[i].token == token) {
             visitorid = related[i].id;
         }
+
+        count += related[i].count;
     }
 
     if (visitorid == null) {
@@ -760,10 +763,10 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
 
     const text = `SELECT COUNT(id) AS count FROM comment WHERE visitorid = $1`;
     const result = await pool.query(text, [visitorid]);
-    console.log("visitor " + visitorid + " has " + result.rows[0].count + " directly related posts");
-    if (result.rows[0].count == 0) {
+    console.log("visitor " + visitorid + " has " + count + " related posts");
+    if (count == 0) {
         return BlackListType.NEW_USER;
-    } else if (result.rows[0].count == 1 && !allowed) {
+    } else if (count == 1 && !allowed) {
         return BlackListType.REQUESTED;
     }
 
