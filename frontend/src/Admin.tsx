@@ -2,6 +2,7 @@ import React, { JSX, useRef, useState } from "react";
 
 import { AdminMain } from "./AdminMain";
 import { AdminFilters } from "./AdminFilters";
+import { Link } from "react-router";
 
 interface Tab {
     name: string,
@@ -17,7 +18,13 @@ export const AdminPanel:React.FC<AdminProps> = ({
 
     const tabs = useRef<Tab[]>([
         { name: "Admin", content: () => {return (<AdminMain  />)}},
-        { name: "Filters", content: () => {return (<AdminFilters />)}}
+        { name: "Filters", content: () => {return (<AdminFilters />)}},
+        { name: "Links", content: () => {return (
+            <div>
+                <Link to="/map">User map</Link><br/><br/>
+                <Link to="/dump">Comment dump</Link>
+            </div>
+        )}}
     ]);
 
     function tabClicked(index: number) {

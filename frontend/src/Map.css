@@ -1,31 +1,31 @@
-#minusOne {
-  padding: 2rem;
+#minusOneMap {
+    padding: 2rem;
 }
 
-#minusOne .outer {
+#minusOneMap .outer {
     padding: 20px;
     background: white;
 }
 
-#minusOne .titleDiv {
+#minusOneMap .titleDiv {
     border-bottom: 1px solid black;
     padding-bottom: 10px;
     margin-bottom: 10px;
 }
 
-#minusOne .titleDiv .title {
+#minusOneMap .titleDiv .title {
     font-size: 16pt;
     font-weight: 600;
 }
 
-#minusOne .titleDiv .commentCount {
+#minusOneMap .titleDiv .commentCount {
     font-style: italic;
     font-weight: 600;
     color: green;
     margin-right: 10px;
 }
 
-#minusOne .snakeQuote {
+#minusOneMap .snakeQuote {
     font-size: 10pt;
     width: 300px;
     text-align: center;
@@ -34,37 +34,37 @@
     margin-left: 10px;
 }
 
-#minusOne .input {
+#minusOneMap .input {
     margin-bottom: 10px;
     color: black;
 }
 
-#minusOne .label {
-    width: 200px;
+#minusOneMap .label {
+    width: 100px;
     display: inline-block;
     vertical-align: top;
 }
 
-#minusOne .sublabel {
+#minusOneMap .sublabel {
     font-size: small;
     color: lightgrey;
 }
 
-#minusOne .formItem {
+#minusOneMap .formItem {
     width: 300px;
     background: white;
     color: black;
 }
 
-#minusOne textarea.formItem {
+#minusOneMap textarea.formItem {
     height: 120px;
 }
 
-#minusOne form {
-   padding-bottom: 10px;
+#minusOneMap form {
+    padding-bottom: 10px;
 }
 
-#minusOne form button {
+#minusOneMap form button {
     border-width: 1px;
     border-color: black;
     padding: 6px 10px;
@@ -72,13 +72,13 @@
     color: black;
 }
 
-#minusOne .comment {
+#minusOneMap .comment {
     border-top: solid 1px;
     padding: 10px 0px;
     overflow: auto;
 }
 
-#minusOne .comment .preview {
+#minusOneMap .comment .preview {
     border-top: dashed lightgrey 1px;
     border-bottom: dashed lightgrey 1px;
     padding-top: 10px;
@@ -88,59 +88,59 @@
     font-size: 10pt;
 }
 
-#minusOne .comment.blocked {
+#minusOneMap .comment.blocked {
     height: 0px;
 }
 
-#minusOne .comment .name {
+#minusOneMap .comment .name {
     font-weight: bold;
     margin-right: 10px;
     color: black;
 }
 
-#minusOne .comment .censored {
+#minusOneMap .comment .censored {
     background-color: black;
 }
 
-#minusOne .comment .time {
+#minusOneMap .comment .time {
     font-style: italic;
     font-size: 10pt;
     color: black;
 }
 
-#minusOne .comment .message {
+#minusOneMap .comment .message {
     max-height: 170px;
     overflow: hidden;
     color: black;
 }
 
-#minusOne .comment .expandedMessage {
+#minusOneMap .comment .expandedMessage {
     max-height: none;
 }
 
-#minusOne .comment .commentLeft {
+#minusOneMap .comment .commentLeft {
     float: left;
     clear: left;
     position: relative;
 }
 
-#minusOne .comment .admin {
+#minusOneMap .comment .admin {
     float: right;
 }
 
-#minusOne .comment .admin .delete {
+#minusOneMap .comment .admin .delete {
     margin-bottom: 20px;
 }
 
-#minusOne .comment .flaggedImage {
+#minusOneMap .comment .flaggedImage {
     width: 160px;
     height: 160px;
     position: absolute;
-    left:50px;
+    left: 50px;
     top: 0px;
 }
 
-#minusOne .nameList {
+#minusOneMap .nameList {
     position: absolute;
     z-index: 1;
     background-color: white;
@@ -148,79 +148,71 @@
     padding: 4px 10px;
 }
 
-#minusOne .userComment {
-    position: absolute;
-    z-index: 2;
-    background-color: white;
-    border: solid black 1px;
-    padding: 4px 10px;
-}
-
-#minusOne .nameList .userBlockDiv {
+#minusOneMap .nameList .userBlockDiv {
     display: flex;
     flex-direction: row;
 }
 
-#minusOne .nameList .userBlockDiv div {
+#minusOneMap .nameList .userBlockDiv div {
     flex: 1;
 }
 
-#minusOne .nameList div {
+#minusOneMap .nameList div {
     width: 100%;
 }
 
-#minusOne .nameList .line {
+#minusOneMap .nameList .line {
     height: 1px;
     width: 100%;
     border: solid black 1px;
     margin: 10px 0px;
 }
 
-#minusOne .nameList .ipBlockDiv {
+#minusOneMap .nameList .ipBlockDiv {
     display: flex;
     flex-direction: row;
 }
 
-#minusOne .nameList .ipBlockDiv div {
+#minusOneMap .nameList .ipBlockDiv div {
     flex: 1;
     align-self: right;
 }
 
-#minusOne .admin .allowPostsDiv {
+#minusOneMap .admin .allowPostsDiv {
     display: flex;
     flex-direction: row;
 }
 
-#minusOne .admin .allowPostsDiv div {
+#minusOneMap .admin .allowPostsDiv div {
     margin-left: 20px
 }
 
-#minusOne .adminPanel {
+#minusOneMap .adminPanel {
     border: 1px solid;
     border-collapse: collapse;
     position: relative;
 }
 
-#minusOne .adminPanel tr {
+#minusOneMap .adminPanel tr {
     border: 1px solid;
 }
 
-#minusOne .adminPanel td {
+#minusOneMap .adminPanel td {
     padding: 0px 10px;
 }
 
-#minusOne .adminPanel .aliasWrapper {
+#minusOneMap .adminPanel .aliasWrapper {
     display: flex;
 }
 
-#minusOne .adminPanel .aliasButton {
+#minusOneMap .adminPanel .aliasButton {
     width: 20px;
     padding: 0px;
     margin-left: 10px;
 }
 
 
-#minusOne .adminTabs .tabs .tab {
+#minusOneMap .adminTabs .tabs .tab {
     padding: 6px 12px;
     background: lightgrey;
     border: solid 1px black;
@@ -228,27 +220,49 @@
     display: inline;
 }
 
-#minusOne .adminTabs .tabs .selected {
+#minusOneMap .adminTabs .tabs .selected {
     border-bottom: solid 2px transparent;
     background: white;
 }
 
 
-#minusOne .adminTabs .pages .page {
+#minusOneMap .adminTabs .pages .page {
     display: none;
     margin-top: 2px;
     border: solid 1px;
     padding: 6px;
 }
 
-#minusOne .adminTabs .pages .selected {
+#minusOneMap .adminTabs .pages .selected {
     display: block;
 }
 
-#minusOne .filterList .filter {
-    border: 1px solid grey;
+#minusOneMap .filterList {
+    display: flex;
+    flex-direction: row;
 }
 
-#minusOne .filterList .filter button {
+#minusOneMap .filterList .filter {
+    border: 1px solid grey;
+    flex: 1;
+}
+
+#minusOneMap .filterList .filter button {
     padding: 6px 10px;
+    flex: 1;
+}
+
+#minusOneMap .dateSlider {
+    background: white;
+    margin-left: 20px;
+    flex: 2;
+    width: 400px;
+}
+
+#minusOneMap .dateSlider .currentDateLabel {
+    text-align: center;
+}
+#minusOneMap .dateSlider .slider {
+    width: 400px;
+    margin: 0px 20px;
 }

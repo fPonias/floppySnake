@@ -21,7 +21,8 @@ export interface UserData {
     names: string[],
     isActive: boolean
     alias: string,
-    blocked: boolean
+    blocked: boolean,
+    lastComment: {name: string, comment: string}
 }
 
 export interface SubUserData {

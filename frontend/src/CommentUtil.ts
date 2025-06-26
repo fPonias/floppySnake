@@ -85,3 +85,33 @@ export function findHyperlinks(message:string):{str: string, match: string | nul
     }
 
 }
+
+export function dateToAgo(date: number): string {
+    const min = 60;
+    const hour = min * 60;
+    const day = hour * 24;
+    const long = day * 30;
+
+    const now = new Date().getTime();
+    const diff = Math.max(0, now - date) / 1000;
+
+    if (diff <= 15) {
+        return "just now";
+    } else if (diff <= min) {
+        return Math.floor(diff) + " seconds ago";
+    } else if (diff <= hour) {
+        const hr = Math.floor(diff / min);
+        if (hr == 1) { return "1 minute ago"; }
+        else { return hr + " minutes ago" };
+    } else if (diff <= day) {
+        const dy = Math.floor(diff / hour);
+        if (dy == 1) { return "1 hour ago" }
+        else { return dy + " hours ago" }
+    } else if (diff <= long) {
+        const mo = Math.floor(diff / day);
+        if (mo == 1) { return "1 day ago" }
+        else { return mo + " days ago" }
+    } else {
+        return "long ago";
+    }
+}

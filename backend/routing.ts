@@ -29,6 +29,10 @@ import {
     getRelatedUsersAndAddressesByIds,
     getRelatedUsersAndAddresses,
     allowUsers,
+    getComments,
+    getRelatedUsersAndAddressesByWhere,
+    getUserComments,
+    markCommentBestOf,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -182,7 +186,7 @@ sectigo.com
     app.get('/comments/:postid/all/:token', async (req, res) => {
         console.log("get comments called with " + JSON.stringify(req.params));
         const isBlacklisted = await isUserBlacklisted(req.params.token);
-        if (isBlacklisted == BlackListType.BLOCKED) {
+        if (isBlacklisted == BlackListType.BLOCKED || !allowPosts) {
             console.log("blacklisted get comments called with " + JSON.stringify(req.params));
             getTopGibberishComments(req.params.postid)
                 .then(response => {
@@ -204,9 +208,9 @@ sectigo.com
         }
     })
 
-    app.get('/comments/:postid/before/:before/:token', (req, res) => {
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
-            if (isBlacklisted || !allowPosts) {
+    app.get('/comments/:postid/before/:before/:token', async (req, res) => {
+        const userStatus = await isUserBlacklisted(req.params.token)
+        if (userStatus == BlackListType.BLOCKED || !allowPosts) {
             console.log("blacklisted get comment before called with " + JSON.stringify(req.params));
             getOlderGibberishComments(req.params.postid, req.params.before)
                 .then(response => {
@@ -215,7 +219,7 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        } else {
+        } else if (userStatus == BlackListType.PERMITTED) {
             console.log("get comment before called with " + JSON.stringify(req.params));
             getOlderComments(req.params.postid, req.params.before)
                 .then(response => {
@@ -224,7 +228,9 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        }});
+        } else {
+            res.status(200).send(JSON.stringify([]));
+        }
     });
 
     app.get('/comments/:postid/count', (req, res) => {
@@ -238,10 +244,10 @@ sectigo.com
             })
     })
 
-    app.get('/comments/:postid/after/:after/:token', (req, res) => {
-           console.log("get comment after called with " + JSON.stringify(req.params));
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
-            if (isBlacklisted || !allowPosts) {
+    app.get('/comments/:postid/after/:after/:token', async (req, res) => {
+        console.log("get comment after called with " + JSON.stringify(req.params));
+        const userStatus = await isUserBlacklisted(req.params.token)
+        if (userStatus == BlackListType.BLOCKED || !allowPosts) {
             console.log("blacklisted get comment after called with " + JSON.stringify(req.params));
             getRecentGibberishComments(req.params.postid, req.params.after)
                 .then(response => {
@@ -250,7 +256,7 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        } else {
+        } else if (userStatus == BlackListType.PERMITTED) {
             getRecentComments(req.params.postid, req.params.after)
                 .then(response => {
                     res.status(200).send(response);
@@ -258,7 +264,9 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        }});
+        } else {
+            res.status(200).send(JSON.stringify([]));
+        }
     })
 
     app.get('/comment/:id/:token', async (req, res) => {
@@ -340,6 +348,7 @@ sectigo.com
             res.status(500).send("nope");
             return;
         }
+
 
         name = await filterString(name)
         let comment = await filterString(original)
@@ -504,26 +513,20 @@ sectigo.com
         res.status(200).send(auth ? "true" : "false");
     });
 
-    app.get('/userData/:key', (req, res) => {
+    app.get('/userData{/:key}', async (req, res) => {
         console.log("userData called with " + JSON.stringify(req.params));
         const key = req.params.key;
 
-        if (!isAuthorized(key)) {
+        /*if (!isAuthorized(key)) {
             console.log("auth request rejected with " + key);
             res.status(500).send("nope");
             return;
-        }
+        }*/
 
         const now = new Date().getTime();
-        getRecentUserData(now - 3600 * 8 * 1000)
-            .then(userData => {
-                MyWebSocket.instance.markActiveUsers(userData);
-                res.status(200).send(JSON.stringify(userData));
-            })
-            .catch(error => {
-                console.log("get user data failed with " + JSON.stringify(error));
-                res.status(500).send(error);
-            });
+        const userData = await getRecentUserData(now - 3600 * 8 * 1000)
+        MyWebSocket.instance.markActiveUsers(userData);
+        res.status(200).send(JSON.stringify(userData));
     })
 
     app.get("/allowPosts", (req, res) => {
@@ -619,16 +622,16 @@ sectigo.com
     })
 
     app.post("/allowUser{/:token}", async (req, res) => {
+        const json = req.body;
+        console.log("allow users called for " + JSON.stringify(json));
 
         if (!isAuthorized(req)) {
             console.log("auth failed");
             res.status(401).send();
-            return;
+            return; 
         }
 
         const now = new Date().getTime();
-        const json = req.body;
-        console.log("allow users called for " + JSON.stringify(json));
         const related = await getRelatedUsersAndAddressesByIds([json.id]);
         console.log("found " + related.length + " related user entries");
 
@@ -641,7 +644,7 @@ sectigo.com
         for (let line of related) {
             ids.push(line.id);
         }
-        await allowUsers(ids, json.allow);
+        await allowUsers([json.id], json.allow);
         const status = await isUserBlacklisted(related[0].token);
 
         const called = new Set<number>()
@@ -716,5 +719,107 @@ sectigo.com
 
         res.status(200).send("success");
         MyWebSocket.instance.broadcastBlocked(now);
+    })
+
+    app.get("/ipData.json", async (req, res) => {
+        console.log("ipData called");
+        fs.readFile("./ipData.json", { encoding: 'utf8' }, (err, data) => {
+            res.status(200).send(data);
+        });
+    })
+
+    app.get("/historyParsed.json", async (req, res) => {
+        console.log("history-parsed called");
+        fs.readFile("./historyParsed.json", { encoding: 'utf8'}, (err, data) => {
+            res.status(200).send(data);
+        })
+    })
+
+    const locations = [
+        "city IN ('City of Syracuse', 'Town of Lake Luzerne')",
+        "domain = 'm247.ro' or city IN ('Grants Pass', 'Hillsboro')",
+        "(city = 'Phoenix' AND domain != 'gslnetworks.com.au') OR domain = 'aws.com'",
+        `iv.visitorid != 83 AND (ip.id = 502 or city = 'Orillia' or 
+            (domain = 'packethub.net' AND (country = 'Canada' or city = 'Buffalo')) OR 
+            country = 'Estonia')
+        `,
+        "state = 'South Carolina'",
+        "iv.visitorid = 13 or iv.visitorid = 367"
+    ]
+
+    app.get("/ip/all{/:token}", async (req, res) => {
+        console.log("ip list called");
+
+        
+        const ret: any[] = [];
+
+        for (let cityList of locations) {
+            console.log("querying city " + cityList);
+            const userData = await getRelatedUsersAndAddressesByWhere(cityList);
+
+            if (userData.length == 0) { continue ;} 
+            const origid = userData[0].visitorid;
+            const arr: any[] = [];
+
+            const ids:number[] = [];
+            for (let line of userData) {
+                ids.push(line.visitorid);
+                line.origid = origid;
+                arr.push(line);
+
+                ids.push(line.visitorid);
+            }
+
+            //const commentList = await getUserComments(ids, true);
+            ret.push({userData: arr});
+        }
+
+        res.status(200).send(JSON.stringify(ret));
+    })
+
+    app.post("/commentData{/:token}", async (req, res) => {
+        console.log("comment list for users called");
+
+        const parts = req.body;
+        const idList:number[] = [];
+        for (let part of parts) {
+            const num = Number.parseInt(part);
+            if (num != undefined) {
+                idList.push(num);
+            }
+        }
+
+        const isAuth = isAuthorized(req);
+        let ret = await getUserComments(idList, isAuth);
+
+        res.status(200).send(JSON.stringify(ret));
+    });
+
+    app.get("/commmentData/all{/:token}", async (req, res) => {
+        console.log("comment list called");
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        const ret = await getComments();
+        res.status(200).send(JSON.stringify(ret));
+    })
+
+    app.post("/comment/bestOf/:id{/:token}", async (req, res) => {
+        console.log("comment best of called for " + req.params.id);
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        const bestof = req.body.value;
+        await markCommentBestOf(req.params.id, bestof);
+
+        res.status(200).send(JSON.stringify("success"));
     })
 }

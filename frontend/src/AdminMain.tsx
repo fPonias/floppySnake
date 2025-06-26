@@ -1,6 +1,7 @@
 import React, { JSX, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppContext, AppUpdateContext } from "./App";
 import { IPAddress, UserData, SubUserData } from "./AdminTools";
+import { dateToAgo } from "./CommentUtil";
 
 interface AdminMainProps {
 }
@@ -11,9 +12,20 @@ export const AdminMain:React.FC<AdminMainProps> = ({
     const appUpdateContext = useContext(AppUpdateContext);
 
     const [nameListOpen, setNameListOpen] = useState(false);
+    const nameListOpenRef = useRef(false);
     const [nameListId, setNameListId] = useState(0);
     const [nameListOffset, setNameListOffset] = useState([0, 0])
+
+    const [commentOpen, setCommentOpen] = useState(false);
+    const commentOpenRef = useRef(false);
+    const [commentOffset, setCommentOffset] = useState([0, 0]);
+
     const [userData, setUserData] = useState<UserData[]>([]);
+
+    useEffect(() => {
+        nameListOpenRef.current = nameListOpen;
+        commentOpenRef.current = commentOpen;
+    }, [nameListOpen, commentOpen]);
 
     useEffect(() => {
         setUserData(appContext.adminBackend?.userData ?? []);
@@ -74,8 +86,38 @@ export const AdminMain:React.FC<AdminMainProps> = ({
         appContext.adminBackend.allowUser(userData.visitorid, allowed);
     }
 
-    function closeNameList() {
+    function closeTopPopup() {
+        if (commentOpenRef.current) {
+            setCommentOpen(false);
+            return;
+        }
+
         setNameListOpen(false);
+    }
+
+    function renderLastComment(): JSX.Element {
+        if (!commentOpen || !nameListId) { return (<></>) }
+
+        const data = userData.find((data) => {
+            return data.visitorid == nameListId;
+        })
+
+        if (!data) { return (<></>) }
+
+        return (
+            <UserComment
+                commentOffset={commentOffset}
+                userData={data}
+                onClosed={closeTopPopup}
+            />
+        )
+    }
+
+    function onCommentClicked(event: React.MouseEvent) {
+        if (commentOpenRef.current) { return; }
+        setCommentOpen(true);
+
+        setCommentOffset([event.pageX, event.pageY]);
     }
 
     function renderNameList(): JSX.Element {
@@ -91,16 +133,17 @@ export const AdminMain:React.FC<AdminMainProps> = ({
             <UserDetails 
                 nameListOffset={nameListOffset} 
                 userData={data} 
-                onClosed={closeNameList} 
+                onClosed={closeTopPopup} 
                 onBlocked={(data, blocked) => {onUserBlocked(data, blocked)}}
                 onIPBlocked={(address, blocked) => {onIPBlocked(address, blocked)}}
                 onAllowed={(userData, allowed) => {onUserAllowed(userData, allowed)}}
+                onCommentClicked={(evt) => {onCommentClicked(evt)}}
             />
         )
     }
 
     function onNameClicked(id: number, event: React.MouseEvent) {
-        if (nameListOpen) { return; }
+        if (nameListOpenRef.current) { return; }
         setNameListOpen(true);
 
         setNameListId(id);
@@ -139,6 +182,7 @@ export const AdminMain:React.FC<AdminMainProps> = ({
             </tbody>
         </table>
         {renderNameList()}
+        {renderLastComment()}
         {renderAllowPosts()}
     </div>)
 };
@@ -167,12 +211,13 @@ const AdminLine: React.FC<AdminLineProps> = ({
     */
     const isIBlocked = userData.ipAddresses.findIndex((line) => { return line.blocked; })
     const isUBlocked = userData.users.findIndex((line) => { return line.blocked; });
-    const isNotAllowed = userData.users.findIndex((line) => { return !line.allowed; });
+    const isAllowed = userData.users.findIndex((line) => { return line.allowed; });
 
     let blockedValue = ""
     if (isUBlocked > -1) { blockedValue += "U" }
     if (isIBlocked > -1) { blockedValue += "I" }
-    if (isNotAllowed > -1 && userData.commentCount >= 1) { blockedValue += "A" }
+    if (isAllowed == -1 && userData.commentCount >= 1) { blockedValue += "A" }
+    if (userData.commentCount == 0) { blockedValue = "Lur"}
 
     return (<tr>
         <td>{userData.visitorid}</td>
@@ -193,6 +238,7 @@ interface UserDetailsProps {
     onBlocked: (userData: SubUserData, blocked: boolean) => void,
     onIPBlocked: (address: string, blocked: boolean) => void,
     onAllowed: (userData: UserData, allowed: boolean) => void,
+    onCommentClicked: (event: React.MouseEvent) => void,
 }
 
 export const UserDetails: React.FC<UserDetailsProps> = ({
@@ -202,6 +248,7 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
     onBlocked,
     onIPBlocked,
     onAllowed,
+    onCommentClicked,
 }: UserDetailsProps) => {
     const nameListOpened = useRef(0);
     const selfClicked = useRef(0);
@@ -229,8 +276,8 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
         selfClicked.current = new Date().getTime();
     }
 
-    const isNotAllowedIdx = userData.users.findIndex((value) => {return !value.allowed});
-    const isAllowed = (isNotAllowedIdx == -1);
+    const isAllowedIdx = userData.users.findIndex((value) => {return value.allowed});
+    const isAllowed = (isAllowedIdx != -1);
 
     return (
         <div className="nameListContainer" onClick={() => { selfClickedEvt() }}>
@@ -238,7 +285,7 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
                 style={{ left: nameListOffset[0], top: nameListOffset[1] }}
             >
                 <div className="userBlockDiv">
-                    <div>Allow entry?</div>
+                    <div onClick={(evt) => {onCommentClicked(evt)}}>Allow entry?</div>
                     <input type="checkbox" checked={isAllowed} onChange={() => {onAllowed(userData, !isAllowed)}} />
                 </div>
                 <div className="line"></div>
@@ -264,6 +311,51 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
                 </div>
             </div>
         </div>)
+}
+
+interface UserCommentProps {
+    commentOffset: number[],
+    userData: UserData,
+    onClosed: () => void,
+}
+
+const UserComment: React.FC<UserCommentProps> = ({
+    commentOffset,
+    userData,
+    onClosed
+}:UserCommentProps) => {
+    const commentOpened = useRef(0);
+    const selfClicked = useRef(0);
+
+    const clickCallback = useCallback(() => {
+        const now = new Date().getTime();
+        const diff = now - commentOpened.current;
+        const selfDiff = now - selfClicked.current;
+        if (diff <= 100 || selfDiff < 100) { return; }
+        onClosed()
+    }, [commentOpened]);
+    const callbackRef = useRef(clickCallback);
+    useEffect(() => { callbackRef.current = clickCallback }, [callbackRef, clickCallback]);
+
+    useEffect(() => {
+        commentOpened.current = new Date().getTime();
+        document.body.addEventListener('click', callbackRef.current);
+
+        return () => {
+            document.body.removeEventListener('click', callbackRef.current)
+        }
+    });
+
+    function selfClickedEvt() {
+        selfClicked.current = new Date().getTime();
+    }
+
+    return (<div className="userComment" onClick={() => { selfClickedEvt() }} style={{ left: commentOffset[0], top: commentOffset[1] }}>
+        <div>{userData.lastComment.name}</div>
+        <div>{userData.lastComment.comment}</div>
+    </div>
+
+    );
 }
 
 interface IPEntryProps {
