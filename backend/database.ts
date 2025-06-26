@@ -731,10 +731,13 @@ export enum BlackListType {
 
 export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     const related = await getRelatedUsersAndAddressesByToken(token);
-    const ids:number[] = [];
+
+    if (related.length == 0) {
+        return BlackListType.NEW_USER;
+    }
+
     let allowed = false;
     let count = 0;
-    let visitorid:number | null = null;
     for (let i = 0; i < related.length; i++) {
         if (related[i].vblocked || related[i].iblocked) {
             console.log("user " + token + " matched blacklist " + JSON.stringify(related[i]))
@@ -750,20 +753,10 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
             allowed = true;
         }
 
-        if (related[i].token == token) {
-            visitorid = related[i].id;
-        }
-
         count += related[i].count;
     }
 
-    if (visitorid == null) {
-        return BlackListType.NEW_USER;
-    }
-
-    const text = `SELECT COUNT(id) AS count FROM comment WHERE visitorid = $1`;
-    const result = await pool.query(text, [visitorid]);
-    console.log("visitor " + visitorid + " has " + count + " related posts");
+    console.log("visitor " + related[0].visitorid + " has " + count + " related posts");
     if (count == 0) {
         return BlackListType.NEW_USER;
     } else if (count == 1 && !allowed) {
@@ -861,9 +854,10 @@ export async function getRelatedUsersAndAddressesByIds(ids: string[]): Promise<a
 
 export async function getRelatedUsersAndAddressesByToken(token: string): Promise<any[]> {
     const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked, visitor.allowed,
-		ip.firstvisited, ip.address, ip."state", 
-		ip.city, ip.country, ip.countrycode, ip.type, ip.blocked iblocked
-	FROM visitor 
+		ip.firstvisited, ip.address, ip."state",
+		ip.city, ip.country, ip.countrycode, ip.type, ip.blocked iblocked,
+		cnt.cnt count
+	FROM visitor
 	JOIN (
 		SELECT iv.* FROM ip_visitor iv JOIN (
 			SELECT DISTINCT(iv.ipid) FROM ip_visitor iv JOIN (
@@ -871,9 +865,10 @@ export async function getRelatedUsersAndAddressesByToken(token: string): Promise
 				JOIN visitor v ON v.id = iv.visitorid
 					WHERE v.token = $1
 			) v ON v.visitorid = iv.visitorid
-		) i ON i.ipid = iv.ipid		
+		) i ON i.ipid = iv.ipid
 	) v ON v.visitorid = visitor.id
 	JOIN ip ON v.ipid = ip.id
+    JOIN (SELECT COUNT(id) cnt, visitorid FROM comment GROUP BY visitorid) cnt ON visitor.id = cnt.visitorid
     `;
 
     const result = await pool.query(text, [token]);
