@@ -1,7 +1,6 @@
 import React, { JSX, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppContext, AppUpdateContext } from "./App";
 import { IPAddress, UserData, SubUserData } from "./AdminTools";
-import { dateToAgo } from "./CommentUtil";
 
 interface AdminMainProps {
 }

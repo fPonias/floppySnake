@@ -171,6 +171,7 @@ const Comment:React.FC<CommentProps> = ({
                 onBlocked={(data, blocked) => {onUserBlocked(data, blocked)}}
                 onIPBlocked={((address, blocked) => { onIPBlocked(address, blocked) })}
                 onAllowed={(userData, allowed) => { onUserAllowed(userData, allowed) }}
+                onCommentClicked={() => {}}
             />
         )
     }
