@@ -119,6 +119,14 @@ export const AdminMain:React.FC<AdminMainProps> = ({
         setCommentOffset([event.pageX, event.pageY]);
     }
 
+    function renderLurkers(): JSX.Element {
+        const lurkers = userData.filter((value) => {
+            return value.commentCount == 0
+        })
+
+        return (<div>{lurkers.length} lurkers.</div>)
+    }
+
     function renderNameList(): JSX.Element {
         if (!nameListOpen || !nameListId) { return (<></>) }
 
@@ -167,12 +175,15 @@ export const AdminMain:React.FC<AdminMainProps> = ({
 
     if (!appContext.adminEnabled || !appContext.adminBackend) { return (<></>) }
 
+    const users = userData.filter((value) => {
+        return value.commentCount > 0
+    })
 
     return (<div className="admin">
         <table className="adminPanel">
             <thead><tr><th>id</th><th>name</th><th>posts</th><th>blocked</th><th>active</th></tr></thead>
             <tbody>
-                {userData.map((value, _) => {
+                {users.map((value, _) => {
                     //const alias = aliasData.get(value.visitorid)
                     return (
                         <AdminLine userData={value} onNameClicked={onNameClicked} />
@@ -180,6 +191,7 @@ export const AdminMain:React.FC<AdminMainProps> = ({
                 })}
             </tbody>
         </table>
+        {renderLurkers()}
         {renderNameList()}
         {renderLastComment()}
         {renderAllowPosts()}
