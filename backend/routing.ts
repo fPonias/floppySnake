@@ -33,6 +33,8 @@ import {
     getRelatedUsersAndAddressesByWhere,
     getUserComments,
     markCommentBestOf,
+    syncIps,
+    getUserToken,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -513,15 +515,33 @@ sectigo.com
         res.status(200).send(auth ? "true" : "false");
     });
 
+    app.get('/userStatus/:id', async (req, res) => {
+        console.log("user status called with " + JSON.stringify(req.params));
+        const id = req.params.id;
+
+        let token = "";
+        let idNum = 0;
+        if (id.indexOf('-') == -1) {
+            idNum = Number.parseInt(id);
+            token = await getUserToken(idNum);
+        } else {
+            token = id;
+        }
+        
+        const status = await isUserBlacklisted(token);
+
+        res.status(200).send("user status for " + idNum + " token " + token + " status: " + status);
+    })
+
     app.get('/userData{/:key}', async (req, res) => {
         console.log("userData called with " + JSON.stringify(req.params));
         const key = req.params.key;
 
-        /*if (!isAuthorized(key)) {
+        if (!isAuthorized(key)) {
             console.log("auth request rejected with " + key);
             res.status(500).send("nope");
             return;
-        }*/
+        }
 
         const now = new Date().getTime();
         const userData = await getRecentUserData(now - 3600 * 8 * 1000)
@@ -726,6 +746,18 @@ sectigo.com
         fs.readFile("./ipData.json", { encoding: 'utf8' }, (err, data) => {
             res.status(200).send(data);
         });
+    })
+
+    app.get("/ipSync{/:token}", async (req, res) => {
+        console.log("sync ip called");
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        await syncIps();
     })
 
     app.get("/historyParsed.json", async (req, res) => {

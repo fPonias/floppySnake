@@ -488,6 +488,18 @@ export async function checkIp(ip: string): Promise<number | null> {
     return null;
 }
 
+export async function syncIps() {
+    try {
+        let text = "SELECT id, address FROM ip WHERE domain IS NULL";
+        let result = await pool.query(text, []);
+        for (let row of result.rows) {
+            await ipLookup(row.address);
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 export async function checkToken(token: string, ip: string): Promise<number | null> {
     try {
         let text = "SELECT id FROM visitor WHERE token = $1";
@@ -564,6 +576,7 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
         WHERE updated >= $1
         ORDER BY updated DESC
     `;
+    console.log("fetching user ids with " + text + " - " + start);
     let result = await pool.query(text, [start]);
 
     const ids: string[] = [];
@@ -593,18 +606,17 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
     for (let row of collatedUserData) {
         const item = userMap.get(row.origid);
         if (!item) { continue; }
-        if (subUsersIndex.has(row.id)) {
-            continue;
-        }
 
-        item.users.push({
-            visitorid: row.id,
-            token: row.token,
-            blocked: row.vblocked,
-            created: row.created,
-            updated: row.updated,
-            allowed: row.allowed
-        });
+        if (!subUsersIndex.has(row.id)) {
+            item.users.push({
+                visitorid: row.id,
+                token: row.token,
+                blocked: row.vblocked,
+                created: row.created,
+                updated: row.updated,
+                allowed: row.allowed
+            });
+        }
 
         const idx = item.ipAddresses.findIndex((ipData) => { return ipData.address == row.address });
         if (idx == -1 || idx == undefined) {
@@ -640,6 +652,7 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
 		) p ON (p.visitorid = c.visitorid)
         ORDER BY lastpost DESC, token
     `;
+    console.log("stats " + text);
     result = await pool.query(text, []);
 
     for (let row of result.rows) {
@@ -729,6 +742,13 @@ export enum BlackListType {
     PERMITTED,
 };
 
+export async function getUserToken(id: number):Promise<string> {
+    const line = `select token from visitor WHERE id = $1`;
+    const result = await pool.query(line, [id]);
+
+    return result.rows[0].token;
+}
+
 export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     const related = await getRelatedUsersAndAddressesByToken(token);
 
@@ -739,14 +759,19 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     let allowed = false;
     let count = 0;
     for (let i = 0; i < related.length; i++) {
-        if (related[i].vblocked || related[i].iblocked) {
-            console.log("user " + token + " matched blacklist " + JSON.stringify(related[i]))
+        if (related[i].vblocked) {
+            console.log("user " + token + " matched visitor blacklist " + JSON.stringify(related[i]))
             return BlackListType.BLOCKED;
+        }
+
+        if (related[i].iblocked) {
+            console.log("user " + token + " matched ip blacklist " + JSON.stringify(related[i]))
+            //return BlackListType.BLOCKED;
         }
 
         if (related[i].countrycode != null && related[i].countrycode != 'US' && related[i].countrycode != 'GB') {
             console.log("user " + token + " matched out of country ISP " + JSON.stringify(related[i]))
-            return BlackListType.BLOCKED;
+            //return BlackListType.BLOCKED;
         }
 
         if (related[i].allowed == true) {
@@ -829,25 +854,23 @@ export async function getRelatedUsersAndAddressesByIds(ids: string[]): Promise<a
         return [];
     }
 
-    const text = `SELECT DISTINCT 
-        v.origid, visitor.id, visitor.token, visitor.blocked vblocked, 
-        visitor.created, visitor.allowed,
-		ip.firstvisited, ip.domain, ip.address, ip."state", 
-		ip.city, ip.countrycode, ip.blocked iblocked
-	FROM visitor 
-	JOIN (
-		SELECT iv.*, i.origid FROM ip_visitor iv JOIN (
-			SELECT iv.ipid, v.origid FROM ip_visitor iv JOIN (
-				SELECT iv.visitorid, v.id origid FROM ip_visitor iv
-				JOIN visitor v ON v.id = iv.visitorid
-			) v ON v.visitorid = iv.visitorid
-		) i ON i.ipid = iv.ipid		
-	) v ON v.visitorid = visitor.id
-	JOIN ip ON v.ipid = ip.id
-	WHERE v.origid IN (${ids.join(',')})
-	ORDER BY origid, visitor.id DESC
+    const text = `SELECT iv.origid, visitor.id, visitor.token, visitor.blocked vblocked, visitor.allowed,
+    	ip.firstvisited, ip.address, ip."state", 
+    	ip.city, ip.country, ip.blocked iblocked
+    FROM visitor 
+    JOIN (
+    	SELECT iv.*, i.origid FROM ip_visitor iv JOIN (
+    		SELECT DISTINCT(iv.ipid), v.origid FROM ip_visitor iv JOIN (
+    			SELECT iv.visitorid, iv.visitorid origid FROM ip_visitor iv
+    			JOIN ip ON ip.id = iv.ipid
+    				WHERE iv.visitorid IN (${ids.join(',')})
+    		) v ON v.visitorid = iv.visitorid
+    	) i ON i.ipid = iv.ipid
+    ) iv ON iv.visitorid = visitor.id
+    JOIN ip ON ip.id = iv.ipid
     `;
 
+    console.log("related users with " + text);
     const result = await pool.query(text, []);
     return result.rows;
 }
