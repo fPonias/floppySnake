@@ -182,6 +182,7 @@ export default function MapView() {
         })
     }, [isPlaying, selectedDate, dateRange])
 
+    // @ts-ignore
     function renderTimeline() {
         //const dateMin = new Date(dateRange.min).toString();
         //const dateMax = new Date(dateRange.max).toString();
@@ -302,6 +303,7 @@ export default function MapView() {
         return {start: retStart, range: mid};
     }
 
+    // @ts-ignore
     async function renderTimelineMarkers() {
         // @ts-ignore
         const { Circle } = await google.maps.importLibrary("maps")
