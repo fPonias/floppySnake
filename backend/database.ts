@@ -445,25 +445,7 @@ async function ipLookup(ipStr: string) {
     }
 }
 
-async function updateIpBlock(ip: string): Promise<boolean> {
-    const related = await getRelatedUsersAndAddresses(ip)
-    const found = related.findIndex((row) => { return (row.iblocked || row.vblocked) })
-    if (found == -1 || found == undefined) { return false; }
-
-    let ret = false;
-    const called = new Set<number>()
-    for (let i = 0; i < related.length; i++) {
-        if (!related[i].vblocked && !called.has(related[i].id)) {
-            ret = true;
-        }
-    }
-
-    return true;
-}
-
 export async function checkIp(ip: string): Promise<number | null> {
-    const blocked = await updateIpBlock(ip);
-
     try {
         let text = "SELECT id, domain FROM ip WHERE address = $1";
         let result = await pool.query(text, [ip]);
@@ -757,7 +739,8 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     }
 
     let allowed = false;
-    let count = 0;
+    let count:number = 0;
+
     for (let i = 0; i < related.length; i++) {
         if (related[i].vblocked) {
             console.log("user " + token + " matched visitor blacklist " + JSON.stringify(related[i]))
@@ -778,7 +761,7 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
             allowed = true;
         }
 
-        count += related[i].count;
+        count += Number.parseInt(related[i].count);
     }
 
     console.log("visitor " + related[0].visitorid + " has " + count + " related posts");
@@ -825,49 +808,13 @@ export async function getRelatedUsersAndAddressesByWhere(where: string): Promise
     return result.rows;
 }
 
-export async function getRelatedUsersAndAddressesById(id: string): Promise<any[]> {
-    const text = `SELECT DISTINCT visitor.id as visitorid, visitor.*, ip.* FROM ip_visitor iv JOIN (
-    	SELECT DISTINCT visitor.id
-    		FROM visitor 
-    		JOIN (
-    			SELECT iv.*, i.origid FROM ip_visitor iv JOIN (
-    				SELECT iv.ipid, v.origid FROM ip_visitor iv JOIN (
-    					SELECT iv.visitorid, v.id origid FROM ip_visitor iv
-    					JOIN visitor v ON v.id = iv.visitorid
-    				) v ON v.visitorid = iv.visitorid
-    			) i ON i.ipid = iv.ipid		
-    		) v ON v.visitorid = visitor.id
-    		JOIN ip ON v.ipid = ip.id
-    		WHERE v.origid = $1
-    		ORDER BY visitor.id DESC
-    ) vid ON vid.id = iv.visitorid
-    JOIN ip ON ip.id = iv.ipid
-    JOIN visitor ON visitor.id = iv.visitorid
-    `;
-
-    const result = await pool.query(text, [id]);
-    return result.rows;
-}
-
 export async function getRelatedUsersAndAddressesByIds(ids: string[]): Promise<any[]> {
     if (ids.length == 0) {
         return [];
     }
 
-    const text = `SELECT iv.origid, visitor.id, visitor.token, visitor.blocked vblocked, visitor.allowed,
-    	ip.firstvisited, ip.address, ip."state", 
-    	ip.city, ip.country, ip.blocked iblocked
-    FROM visitor 
-    JOIN (
-    	SELECT iv.*, i.origid FROM ip_visitor iv JOIN (
-    		SELECT DISTINCT(iv.ipid), v.origid FROM ip_visitor iv JOIN (
-    			SELECT iv.visitorid, iv.visitorid origid FROM ip_visitor iv
-    			JOIN ip ON ip.id = iv.ipid
-    				WHERE iv.visitorid IN (${ids.join(',')})
-    		) v ON v.visitorid = iv.visitorid
-    	) i ON i.ipid = iv.ipid
-    ) iv ON iv.visitorid = visitor.id
-    JOIN ip ON ip.id = iv.ipid
+    const text = `SELECT DISTINCT visitor_loopback.* FROM visitor_loopback WHERE
+    visitor_loopback.origid IN (${ids.join(',')})
     `;
 
     console.log("related users with " + text);
@@ -876,22 +823,9 @@ export async function getRelatedUsersAndAddressesByIds(ids: string[]): Promise<a
 }
 
 export async function getRelatedUsersAndAddressesByToken(token: string): Promise<any[]> {
-    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked, visitor.allowed,
-		ip.firstvisited, ip.address, ip."state",
-		ip.city, ip.country, ip.countrycode, ip.type, ip.blocked iblocked,
-		cnt.cnt count
-	FROM visitor
-	JOIN (
-		SELECT iv.* FROM ip_visitor iv JOIN (
-			SELECT DISTINCT(iv.ipid) FROM ip_visitor iv JOIN (
-				SELECT iv.visitorid FROM ip_visitor iv
-				JOIN visitor v ON v.id = iv.visitorid
-					WHERE v.token = $1
-			) v ON v.visitorid = iv.visitorid
-		) i ON i.ipid = iv.ipid
-	) v ON v.visitorid = visitor.id
-	JOIN ip ON v.ipid = ip.id
-    JOIN (SELECT COUNT(id) cnt, visitorid FROM comment GROUP BY visitorid) cnt ON visitor.id = cnt.visitorid
+    const text = `SELECT DISTINCT visitor_loopback.*, COALESCE(cnt, 0) FROM visitor_loopback 
+LEFT OUTER JOIN (SELECT COUNT(id) cnt, visitorid FROM comment GROUP BY visitorid) cnt ON visitor_loopback.id = cnt.visitorid
+WHERE origtoken = $1
     `;
 
     const result = await pool.query(text, [token]);
@@ -899,20 +833,7 @@ export async function getRelatedUsersAndAddressesByToken(token: string): Promise
 }
 
 export async function getRelatedUsersAndAddresses(ip: string): Promise<any[]> {
-    const text = `SELECT visitor.id, visitor.token, visitor.blocked vblocked, visitor.allowed,
-    	ip.firstvisited, ip.address, ip."state", 
-    	ip.city, ip.country, ip.blocked iblocked
-    FROM visitor 
-    JOIN (
-    	SELECT iv.* FROM ip_visitor iv JOIN (
-    		SELECT DISTINCT(iv.ipid) FROM ip_visitor iv JOIN (
-    			SELECT iv.visitorid FROM ip_visitor iv
-    			JOIN ip ON ip.id = iv.ipid
-    				WHERE ip.address = $1
-    		) v ON v.visitorid = iv.visitorid
-    	) i ON i.ipid = iv.ipid
-    ) iv ON iv.visitorid = visitor.id
-    JOIN ip ON ip.id = iv.ipid
+    const text = `SELECT DISTINCT visitor_loopback.* FROM visitor_loopback WHERE origid = $1
     `;
 
     const result = await pool.query(text, [ip]);

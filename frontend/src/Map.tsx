@@ -124,13 +124,14 @@ export default function MapView() {
 
             setLoading(false);
 
-            //renderMarkers();
+            renderMarkers();
         }
         delayed();
     }, [appContext.adminBackend?.adminToken, loading]);
 
     useEffect(() => {
-        renderTimelineMarkers();
+        //renderTimelineMarkers();
+        renderMarkers();
     }, [selected, selectedDate]);
 
     const index = useRef<Map<Number, any[]>>(new Map());
@@ -476,7 +477,7 @@ export default function MapView() {
     }
 
     return (<>
-        {renderTimeline()}
+        {/*renderTimeline()*/}
         <div style={{ width: 600, height: 400 }} id="map" />
         {renderSelector()}
         {renderQuotes()}
