@@ -2,7 +2,7 @@ import env2 from '../env';
 import { WebSocketServer } from "ws";
 import { v4 } from "uuid";
 import url from "url";
-import { checkToken, UserData, BlackListType, isUserBlacklisted } from './database';
+import { checkToken, UserData, BlackListType, isUserBlacklisted, BlackListTypeString } from './database';
 import { authorize, getGrants, isAuthorized } from './adminKey';
 import { isBlacklisted } from './filter';
 
@@ -161,7 +161,7 @@ export default class MyWebSocket {
                 connData.token = token;
                 this.tokenIndex.set(token, connData);
                 const userStatus = await isUserBlacklisted(token);
-                console.log("visitor " + visitorid + " logged in with status " + userStatus);
+                console.log("visitor " + visitorid + " logged in with status " + BlackListTypeString.get(userStatus));
 
                 const message = JSON.stringify({ action: "token", token: token, status: userStatus });
                 connection.send(message);

@@ -558,7 +558,7 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
         WHERE updated >= $1
         ORDER BY updated DESC
     `;
-    console.log("fetching user ids with " + text + " - " + start);
+    //console.log("fetching user ids with " + text + " - " + start);
     let result = await pool.query(text, [start]);
 
     const ids: string[] = [];
@@ -634,7 +634,7 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
 		) p ON (p.visitorid = c.visitorid)
         ORDER BY lastpost DESC, token
     `;
-    console.log("stats " + text);
+    //console.log("stats " + text);
     result = await pool.query(text, []);
 
     for (let row of result.rows) {
@@ -724,6 +724,12 @@ export enum BlackListType {
     PERMITTED,
 };
 
+export const BlackListTypeString = new Map<BlackListType, string>();
+BlackListTypeString.set(BlackListType.BLOCKED, "blocked");
+BlackListTypeString.set(BlackListType.NEW_USER, "new user");
+BlackListTypeString.set(BlackListType.REQUESTED, "requested");
+BlackListTypeString.set(BlackListType.PERMITTED, "permitted");
+
 export async function getUserToken(id: number):Promise<string> {
     const line = `select token from visitor WHERE id = $1`;
     const result = await pool.query(line, [id]);
@@ -761,17 +767,19 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
             allowed = true;
         }
 
-        count += Number.parseInt(related[i].count);
+        if (related[i].count != null) {
+            count += Number.parseInt(related[i].count);
+        }
     }
 
-    console.log("visitor " + related[0].visitorid + " has " + count + " related posts");
     if (count == 0) {
         return BlackListType.NEW_USER;
-    } else if (count == 1 && !allowed) {
+    } 
+    
+    console.log("visitor " + related[0].origid + " has " + count + " related posts");
+    if (count == 1 && !allowed) {
         return BlackListType.REQUESTED;
-    }
-
-    if (!allowed) {
+    } else if (!allowed) {
         return BlackListType.BLOCKED;
     }
 
@@ -823,7 +831,7 @@ export async function getRelatedUsersAndAddressesByIds(ids: string[]): Promise<a
 }
 
 export async function getRelatedUsersAndAddressesByToken(token: string): Promise<any[]> {
-    const text = `SELECT DISTINCT visitor_loopback.*, COALESCE(cnt, 0) FROM visitor_loopback 
+    const text = `SELECT DISTINCT visitor_loopback.*, COALESCE(cnt, 0) count FROM visitor_loopback 
 LEFT OUTER JOIN (SELECT COUNT(id) cnt, visitorid FROM comment GROUP BY visitorid) cnt ON visitor_loopback.id = cnt.visitorid
 WHERE origtoken = $1
     `;
