@@ -163,7 +163,7 @@ export const updateParent = async (id: number, date: number, failsafe: number = 
     }
 
     try {
-        console.log("updating parent " + id);
+        //console.log("updating parent " + id);
         let text = "SELECT parent FROM comment WHERE id = $1";
         let result = await pool.query(text, [id]);
 
@@ -811,7 +811,7 @@ export async function getRelatedUsersAndAddressesByWhere(where: string): Promise
         JOIN visitor ON visitor.id = ids.vid
     `;
 
-    console.log ("running " + text);
+    //console.log ("running " + text);
     const result = await pool.query(text, []);
     return result.rows;
 }
@@ -825,7 +825,7 @@ export async function getRelatedUsersAndAddressesByIds(ids: string[]): Promise<a
     visitor_loopback.origid IN (${ids.join(',')})
     `;
 
-    console.log("related users with " + text);
+    //console.log("related users with " + text);
     const result = await pool.query(text, []);
     return result.rows;
 }
