@@ -219,6 +219,10 @@
     margin-left: 10px;
 }
 
+#minusOne .check {
+    width: 30px;
+    height: 30px;
+}
 
 #minusOne .adminTabs .tabs .tab {
     padding: 6px 12px;

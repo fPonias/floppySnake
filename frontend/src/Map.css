@@ -27,7 +27,7 @@
 
 #minusOneMap .snakeQuote {
     font-size: 10pt;
-    width: 300px;
+    width: 200px;
     text-align: center;
     background-color: #f6f6f6;
     padding: 10px;
@@ -51,7 +51,7 @@
 }
 
 #minusOneMap .formItem {
-    width: 300px;
+    width: 200px;
     background: white;
     color: black;
 }

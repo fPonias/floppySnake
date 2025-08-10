@@ -554,14 +554,31 @@ export interface SubUserData {
 
 export async function getRecentUserData(start: number): Promise<UserData[]> {
     console.log('fetching userdata from ' + start);
-    let text = `SELECT * FROM visitor 
+    let text = `SELECT id FROM visitor 
         WHERE updated >= $1
-        ORDER BY updated DESC
     `;
+
     //console.log("fetching user ids with " + text + " - " + start);
     let result = await pool.query(text, [start]);
 
     const ids: string[] = [];
+    for (let row of result.rows) {
+        ids.push(row.id);
+    }
+
+    return getExtendedUserData(ids)
+}
+
+export async function getExtendedUserData(ids: string[]): Promise<UserData[]> {
+    
+    let text = `SELECT * FROM visitor 
+        WHERE visitor.id IN (${ids.join(',')})
+        ORDER BY updated DESC
+    `;
+
+    //console.log("fetching user ids with " + text + " - " + start);
+    let result = await pool.query(text);
+
     const userMap: Map<number, UserData> = new Map();
     for (let row of result.rows) {
         const item: UserData = {
@@ -632,6 +649,7 @@ export async function getRecentUserData(start: number): Promise<UserData[]> {
 				SELECT MAX(posted) lastpost, visitorid FROM comment GROUP BY visitorid
 			) m ON comment.visitorid = m.visitorid AND comment.posted = m.lastpost
 		) p ON (p.visitorid = c.visitorid)
+		WHERE count IS NOT NULL
         ORDER BY lastpost DESC, token
     `;
     //console.log("stats " + text);

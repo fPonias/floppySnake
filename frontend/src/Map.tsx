@@ -21,7 +21,7 @@ export default function MapView() {
     useMount(() => {
         // @ts-ignore
         (g => { var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__", m = document, b = window; b = b[c] || (b[c] = {}); var d = b.maps || (b.maps = {}), r = new Set, e = new URLSearchParams, u = () => h || (h = new Promise(async (f, n) => { await (a = m.createElement("script")); e.set("libraries", [...r] + ""); for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]); e.set("callback", c + ".maps." + q); a.src = `https://maps.${c}apis.com/maps/api/js?` + e; d[q] = f; a.onerror = () => h = n(Error(p + " could not load.")); a.nonce = m.querySelector("script[nonce]")?.nonce || ""; m.head.append(a) })); d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n)) })({
-            key: "AIzaSyAZCjFTnKzJ6-eVIzN0dWGxi9Jszz8aQHM",
+            key: env.googleMapsKey,
             v: "weekly",
             // Use the 'v' parameter to indicate the version to use (weekly, beta, alpha, etc.).
             // Add other bootstrap parameters as needed, using camel case.
@@ -73,9 +73,20 @@ export default function MapView() {
     }
 
     async function loadLocationsData() {
-        const url = env.api + "/ipData.json";
-        const res = await fetch(url);
+        let url = env.api + "/ipData.json";
+        let res = await fetch(url);
         const json = await res.json();
+
+        url = env.api + "/ipDataNames";
+        res = await fetch(url);
+        commentOrder.current = await res.json();
+
+        const orderIdx: Map<number, number> = new Map();
+        for (let key in commentOrder.current) {
+            let nameItem = commentOrder.current[key];
+            let keyNum = Number.parseInt(key);
+            orderIdx.set(keyNum, nameItem.order);
+        }
 
         for (let item of json) {
             const origid = item.userData[0].visitorid;
@@ -136,6 +147,9 @@ export default function MapView() {
 
     const index = useRef<Map<Number, any[]>>(new Map());
     const commentIndex = useRef<Map<Number, any[]>>(new Map());
+    const commentOrder = useRef<object>({});
+    const commentNames = useRef<Map<Number, Number>>(new Map());
+    const commentOrderIdx = useRef<Map<Number, Number>>(new Map());
     const timelineIndex = useRef<any[]>([]);
     const tags = useRef<number[]>([]);
     const selectedRef = useRef<number>(0);
@@ -208,6 +222,17 @@ export default function MapView() {
     }
 
     function renderSelector() {
+        const used = new Set<Number>();
+        for (let tag of tags.current) {
+
+        }
+        
+        for (let key of commentOrderIdx.current.keys()) {
+            let id = commentOrderIdx.current.get(key);
+            if (id == undefined) { continue; }
+
+        }
+
         return (
             <div style={{marginBottom: 20, marginTop: 20}}>
                 <select onChange={(elem) => {setSelected(elem.currentTarget.selectedIndex)}}>
@@ -415,7 +440,7 @@ export default function MapView() {
     }
 
     async function setBestOf(commentid: number, bestof: boolean) {
-        if (!ALLOW_ADMIN || appContext.adminBackend?.adminToken == null) {
+        if (!ALLOW_ADMIN) { // || appContext.adminBackend?.adminToken == null) {
             return;
         }
 
@@ -427,7 +452,7 @@ export default function MapView() {
         const comment = comments.find((line) => {return line.id == commentid})
         if (comment == undefined) { return; }
 
-        let url = env.api + "/comment/bestOf/" + comment.id + "/" + appContext.adminBackend.adminToken;
+        let url = env.api + "/comment/bestOf/" + comment.id //+ "/" + appContext.adminBackend.adminToken;
 
         await fetch(url, {
             method: 'POST',
@@ -461,8 +486,8 @@ export default function MapView() {
                     >
                         <div className="commentLeft">
                             <div className='header'>
-                                {(ALLOW_ADMIN && appContext.adminEnabled) ? (
-                                    <input type="checkbox" onClick={
+                                {(ALLOW_ADMIN) ? (// && appContext.adminEnabled) ? (
+                                    <input className="check" type="checkbox" onClick={
                                         () => {setBestOf(localComment.id, !localComment.bestof)}
                                     } checked={localComment.bestof}></input>
                                 ) : <></>}
@@ -480,7 +505,7 @@ export default function MapView() {
 
     return (<>
         {/*renderTimeline()*/}
-        <div style={{ width: 600, height: 400 }} id="map" />
+        <div style={{ width: 400, height: 300 }} id="map" />
         {renderSelector()}
         {renderQuotes()}
     </>)

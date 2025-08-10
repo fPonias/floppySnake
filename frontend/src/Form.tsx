@@ -1,9 +1,8 @@
 import React, { JSX, useContext, useRef, useState } from "react";
 import env from "../../env";
 import CommentEntry from "./CommentEntry";
-import { useCookies } from "react-cookie";
-import { CookieValues } from "./defs";
 import { AppContext } from "./App";
+import { LocalStorageKeys, useLocalStorage } from "./localStorageWrapper";
 
 
 interface FormArgs {
@@ -21,10 +20,11 @@ export function FormComponent({
     const appContext = useContext(AppContext);
     const [comment, setComment] = useState<string>(appContext.activeReply?.comment ?? "");
     const form = useRef<HTMLFormElement | null>(null); 
-    const [cookies, setCookie] = useCookies<"name", CookieValues>(["name"]);
     const [adminTaps, setAdminTaps] = useState<number>(0);
     const nameLabel = useRef<HTMLDivElement | null>(null);
     const commentLabel = useRef<HTMLDivElement | null>(null);
+
+    const { getter: name, setter: setName } = useLocalStorage(LocalStorageKeys.name);
 
     async function postComment(evt:React.MouseEvent) {
         evt.preventDefault();
@@ -34,7 +34,7 @@ export function FormComponent({
         const token = appContext.apiToken
         let args = {
             comment: comment,
-            name: cookies.name,
+            name: name ?? "",
             postid: postid,
             parent: (replyTo) ? replyTo.id : null,
             token: token
@@ -68,7 +68,7 @@ export function FormComponent({
             return;
         }
 
-        setCookie("name", newValue);
+        setName(newValue);
     }
 
     function validateAndSetComment(evt: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -126,7 +126,7 @@ export function FormComponent({
             <div className="input">
                 <div className="label" ref={(ref) => {nameLabel.current = ref}} onClick={() => {onAdminTap(nameLabel.current)}}>{nameLabelTxt}</div>
                 <input className="formItem"
-                    name='name' value={cookies.name}
+                    name='name' value={name ?? ""}
                     onChange={(evt) => { validateAndSetName(evt) }}
                 />
             </div>

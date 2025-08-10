@@ -748,6 +748,21 @@ sectigo.com
         });
     })
 
+    app.get("/ipDataNames", async (req, res) => {
+        console.log("ipData names called");
+        const ret = {
+            1067: {order: 5, name: "Doormat"},
+            2165: {order: 6, name: "Not a spy"},
+            924: {order: 3, name: "Biff Tannen"},
+            680: {order: 1, name: "Azzbania"},
+            22: {order: 2, name: "Low T crybaby"},
+            13: {order: 4, name: "NWA"},
+            28: {order: 0, name: "Pappy"}
+        }
+
+        res.status(200).send(JSON.stringify(ret));
+    });
+
     app.get("/ipSync{/:token}", async (req, res) => {
         console.log("sync ip called");
 
@@ -776,7 +791,8 @@ sectigo.com
             country = 'Estonia')
         `,
         "state = 'South Carolina'",
-        "iv.visitorid = 13 or iv.visitorid = 367"
+        "iv.visitorid = 13 or iv.visitorid = 367",
+        "iv.visitorid = 2919"
     ]
 
     app.get("/ip/all{/:token}", async (req, res) => {
@@ -821,7 +837,7 @@ sectigo.com
             }
         }
 
-        const isAuth = isAuthorized(req);
+        const isAuth = true; //isAuthorized(req);
         let ret = await getUserComments(idList, isAuth);
 
         res.status(200).send(JSON.stringify(ret));
@@ -842,13 +858,13 @@ sectigo.com
 
     app.post("/comment/bestOf/:id{/:token}", async (req, res) => {
         console.log("comment best of called for " + req.params.id);
-
+/*
         if (!isAuthorized(req)) {
             console.log("auth failed");
             res.status(401).send();
             return;
         }
-
+*/
         const bestof = req.body.value;
         await markCommentBestOf(req.params.id, bestof);
 

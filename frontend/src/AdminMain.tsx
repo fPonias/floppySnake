@@ -167,7 +167,7 @@ export const AdminMain:React.FC<AdminMainProps> = ({
     function renderAllowPosts() {
         return (
             <div className="allowPostsDiv">
-                <input type="checkbox" checked={appContext.allowPosts} onChange={() => { setAllowPosts(!appContext.allowPosts) }} />
+                <input type="checkbox" className="check" checked={appContext.allowPosts} onChange={() => { setAllowPosts(!appContext.allowPosts) }} />
                 <div>Allow posts</div>
             </div>
         )
@@ -297,7 +297,7 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
             >
                 <div className="userBlockDiv">
                     <div onClick={(evt) => {onCommentClicked(evt)}}>Allow entry?</div>
-                    <input type="checkbox" checked={isAllowed} onChange={() => {onAllowed(userData, !isAllowed)}} />
+                    <input type="checkbox" className="check" checked={isAllowed} onChange={() => {onAllowed(userData, !isAllowed)}} />
                 </div>
                 <div className="line"></div>
                 <div>
@@ -310,7 +310,7 @@ export const UserDetails: React.FC<UserDetailsProps> = ({
                     {userData.users.map((user) => { return (
                         <div className="userBlockDiv">
                             <div>block {user.visitorid}</div>
-                            <input type="checkbox" checked={user.blocked} onChange={() => {onBlocked(user, !user.blocked)}}/>
+                            <input type="checkbox" className="check" checked={user.blocked} onChange={() => {onBlocked(user, !user.blocked)}}/>
                         </div>
                     )})}
                 </div>
@@ -389,6 +389,6 @@ export const IPEntry: React.FC<IPEntryProps> = ({
             <div><a target="_blank" rel="noopener noreferrer" href={lookupUrl}>{stripped}</a></div>
             <div>{ipData.domain} {ipData.countryCode} {ipData.state} {ipData.city}</div>
         </div>
-        <input type="checkbox" checked={ipData.blocked} onClick={() => {onBlocked(ipData.address)}} />
+        <input type="checkbox" className="check" checked={ipData.blocked} onClick={() => {onBlocked(ipData.address)}} />
     </div>)
 }

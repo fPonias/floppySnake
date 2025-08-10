@@ -13,6 +13,7 @@ import EventEmitter from "reactjs-eventemitter";
 import { AdminTools } from './AdminTools';
 import { AdminPanel } from './Admin';
 import VisitorEntries from './VisitorEntry';
+import { LocalStorageKeys, useLocalStorage } from './localStorageWrapper';
 
 interface ActiveReplyData {
     name: string,
@@ -69,7 +70,20 @@ function App() {
 
     const ws = useRef<WebSocketHook | undefined>(undefined);
 
-    const [cookies, setCookie, removeCookie] = useCookies(["token", "name", "apiToken"]);
+    const [cookies] = useCookies(["token", "name", "apiToken"]);
+    const {getter: name, setter: setName} = useLocalStorage(LocalStorageKeys.name);
+    const {getter: token, setter: setToken} = useLocalStorage(LocalStorageKeys.token);
+    const {getter: apiToken, setter: setApiToken} = useLocalStorage(LocalStorageKeys.apiToken);
+
+    useEffect(() => {
+        const lsToken = localStorage.getItem("token");
+        if (lsToken) { return; }
+        if (cookies.token == undefined) { return; }
+
+        setName(cookies.name);
+        setToken(cookies.token);
+        setApiToken(cookies.apiToken);
+    }, [cookies]);
 
     const setTriggerUpdate = useCallback(() => {
         updateContext.triggerUpdate = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -94,7 +108,7 @@ function App() {
             console.log('opened');
 
             if (ws.current) {
-                ws.current.sendMessage(JSON.stringify({action: "apiTokenVerify", token: cookies.apiToken}));
+                ws.current.sendMessage(JSON.stringify({action: "apiTokenVerify", token: apiToken}));
             }
         },
         shouldReconnect: (_) => true,
@@ -128,7 +142,7 @@ function App() {
                     })
                 }
             } else if (data.action == "token") {
-                setCookie("apiToken", data.token);
+                setApiToken(data.token);
                 appContext.apiToken = data.token;
 
                 const commentBack = appContext.commentBackend;
@@ -139,8 +153,8 @@ function App() {
                 appContext.userStatus = data.status;
                 firstLoad();
 
-                if (cookies.token) {
-                    const arg = JSON.stringify({ action: "adminTokenVerify", token: cookies.token });
+                if (token) {
+                    const arg = JSON.stringify({ action: "adminTokenVerify", token: token });
                     ws.current?.sendMessage(arg);
                 }
             } else if (data.action == "update") {
@@ -156,12 +170,12 @@ function App() {
                 appContext.adminBackend?.runUpdate();
             } else if (data.action == "isAdmin") {
                 if (!data.result) {
-                    removeCookie("token");
+                    setToken(null);
                 }
 
                 appContext.adminEnabled = data.result;
                 if (appContext.adminBackend) {
-                    appContext.adminBackend.adminToken = cookies.token;
+                    appContext.adminBackend.adminToken = token;
                     appContext.adminBackend.runUpdate().then(() => {
                         appContext.adminBackend?.runUpdateFilters().then(
                             () => { setTriggerAdminUpdate(); }
@@ -170,7 +184,7 @@ function App() {
                 }
             } else if (data.action == "adminToken") {
                 appContext.adminEnabled = (data.result) ? true : false;
-                setCookie("token", data.result);
+                setToken(data.result);
                 if (appContext.adminBackend) {
                     appContext.adminBackend.adminToken = data.result;
                     appContext.adminBackend.runUpdate().then(() => {
@@ -243,6 +257,7 @@ function App() {
         return () => {
             window.removeEventListener("visibilitychange", visChngF);
         };
+
     }, []);
 
     function visChngF() {
@@ -289,7 +304,7 @@ function App() {
         } else {
             appContext.activeReply = {
                 id: id,
-                name: cookies.name ?? "",
+                name: name ?? "",
                 comment: ""
             }
         }
@@ -305,7 +320,7 @@ function App() {
         const result = await appContext.commentBackend?.deletePost(id);
         if (result == 401) {
             appContext.adminEnabled = false;
-            removeCookie("token");
+            setToken(null);
         }
     }
 
