@@ -81,12 +81,12 @@ export default function MapView() {
         res = await fetch(url);
         commentOrder.current = await res.json();
 
-        const orderIdx: Map<number, number> = new Map();
-        for (let key in commentOrder.current) {
-            let nameItem = commentOrder.current[key];
-            let keyNum = Number.parseInt(key);
-            orderIdx.set(keyNum, nameItem.order);
-        }
+        //const orderIdx: Map<number, number> = new Map();
+        //for (let key in commentOrder.current) {
+            //let nameItem = commentOrder.current[key];
+            //let keyNum = Number.parseInt(key);
+            //orderIdx.set(keyNum, nameItem.order);
+        //}
 
         for (let item of json) {
             const origid = item.userData[0].visitorid;
@@ -148,7 +148,6 @@ export default function MapView() {
     const index = useRef<Map<Number, any[]>>(new Map());
     const commentIndex = useRef<Map<Number, any[]>>(new Map());
     const commentOrder = useRef<object>({});
-    const commentNames = useRef<Map<Number, Number>>(new Map());
     const commentOrderIdx = useRef<Map<Number, Number>>(new Map());
     const timelineIndex = useRef<any[]>([]);
     const tags = useRef<number[]>([]);
@@ -222,11 +221,6 @@ export default function MapView() {
     }
 
     function renderSelector() {
-        const used = new Set<Number>();
-        for (let tag of tags.current) {
-
-        }
-        
         for (let key of commentOrderIdx.current.keys()) {
             let id = commentOrderIdx.current.get(key);
             if (id == undefined) { continue; }
