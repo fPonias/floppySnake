@@ -10,6 +10,16 @@ const { Pool } = pkg;
 
 const pool = new Pool(env.dbArgs);
 
+export const getTopPost = async (matches: String): Promise<any> => {
+    try {
+        const res = await pool.query(`SELECT * FROM post WHERE url LIKE %$1% ORDER BY id DESC LIMIT 1`, [matches]);
+        return res.rows[0];
+    } catch (err) {
+        console.error(err);
+        throw new Error("Internal server error");
+    }
+}
+
 const commentQuery = `
     SELECT comment.* FROM comment
 `
@@ -26,9 +36,19 @@ export const getTopComments = async (postid: number): Promise<any[]> => {
     }
 }
 
+export const getAllComments = async (count: number): Promise<any[]> => {
+    try {
+        const res = await pool.query(`${commentQuery} WHERE ORDER BY id DESC LIMIT $1`, [count]);
+        return res.rows;
+    } catch (err) {
+        console.error(err);
+        throw new Error("Internal server error");
+    }
+}
+
 export const getTopGibberishComments = async (postid: number): Promise<any[]> => {
     try {
-        const ret = await getTopComments(postid);
+        const ret = await getAllComments(1000);
         for (let row of ret) {
             const gibberish = GibberishInstance.getComment(row.id);
 
@@ -38,6 +58,7 @@ export const getTopGibberishComments = async (postid: number): Promise<any[]> =>
             row.comment = gibberish.message;
             row.original = "";
         }
+
         return ret;
     } catch (err) {
         console.error(err);
@@ -589,6 +610,7 @@ export async function getExtendedUserData(ids: string[]): Promise<UserData[]> {
             commentCount: 0,
             flaggedCount: 0,
             lastPost: 0,
+            
             ipAddresses: [],
             users: [],
             names: [],

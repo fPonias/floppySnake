@@ -190,7 +190,8 @@ sectigo.com
         const isBlacklisted = await isUserBlacklisted(req.params.token);
         if (isBlacklisted == BlackListType.BLOCKED || !allowPosts) {
             console.log("blacklisted get comments called with " + JSON.stringify(req.params));
-            getTopGibberishComments(req.params.postid)
+            const count = Math.round((Math.random() - 0.5) * 500 + 1000);
+            getTopGibberishComments(count)
                 .then(response => {
                     res.status(200).send(response);
                 })
