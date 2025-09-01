@@ -40,7 +40,7 @@
 }
 
 #minusOne .label {
-    width: 100px;
+    width: 200px;
     display: inline-block;
     vertical-align: top;
 }
@@ -148,6 +148,14 @@
     padding: 4px 10px;
 }
 
+#minusOne .userComment {
+    position: absolute;
+    z-index: 2;
+    background-color: white;
+    border: solid black 1px;
+    padding: 4px 10px;
+}
+
 #minusOne .nameList .userBlockDiv {
     display: flex;
     flex-direction: row;
@@ -211,6 +219,10 @@
     margin-left: 10px;
 }
 
+#minusOne .check {
+    width: 30px;
+    height: 30px;
+}
 
 #minusOne .adminTabs .tabs .tab {
     padding: 6px 12px;

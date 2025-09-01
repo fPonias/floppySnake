@@ -24,13 +24,17 @@ import {
     deleteFilter,
     blockUser,
     blockIP,
+    BlackListType,
     isUserBlacklisted,
     getRelatedUsersAndAddressesByIds,
     getRelatedUsersAndAddresses,
+    allowUsers,
     getComments,
     getRelatedUsersAndAddressesByWhere,
     getUserComments,
     markCommentBestOf,
+    syncIps,
+    getUserToken,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -181,18 +185,20 @@ sectigo.com
         res.status(200).send(JSON.stringify(gibberishQuote));
     })
 
-    app.get('/comments/:postid/all/:token', (req, res) => {
+    app.get('/comments/:postid/all/:token', async (req, res) => {
         console.log("get comments called with " + JSON.stringify(req.params));
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => { if (isBlacklisted || !allowPosts) {
+        const isBlacklisted = await isUserBlacklisted(req.params.token);
+        if (isBlacklisted == BlackListType.BLOCKED || !allowPosts) {
             console.log("blacklisted get comments called with " + JSON.stringify(req.params));
-            getTopGibberishComments(req.params.postid)
+            const count = Math.round((Math.random() - 0.5) * 500 + 1000);
+            getTopGibberishComments(count)
                 .then(response => {
                     res.status(200).send(response);
                 })
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        } else {
+        } else if (isBlacklisted == BlackListType.PERMITTED) {
             getTopComments(req.params.postid)
                 .then(response => {
                     res.status(200).send(response);
@@ -200,12 +206,14 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        }});
+        } else {
+            res.status(200).send(JSON.stringify([]));
+        }
     })
 
-    app.get('/comments/:postid/before/:before/:token', (req, res) => {
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
-            if (isBlacklisted || !allowPosts) {
+    app.get('/comments/:postid/before/:before/:token', async (req, res) => {
+        const userStatus = await isUserBlacklisted(req.params.token)
+        if (userStatus == BlackListType.BLOCKED || !allowPosts) {
             console.log("blacklisted get comment before called with " + JSON.stringify(req.params));
             getOlderGibberishComments(req.params.postid, req.params.before)
                 .then(response => {
@@ -214,7 +222,7 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        } else {
+        } else if (userStatus == BlackListType.PERMITTED) {
             console.log("get comment before called with " + JSON.stringify(req.params));
             getOlderComments(req.params.postid, req.params.before)
                 .then(response => {
@@ -223,7 +231,9 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        }});
+        } else {
+            res.status(200).send(JSON.stringify([]));
+        }
     });
 
     app.get('/comments/:postid/count', (req, res) => {
@@ -237,10 +247,10 @@ sectigo.com
             })
     })
 
-    app.get('/comments/:postid/after/:after/:token', (req, res) => {
-           console.log("get comment after called with " + JSON.stringify(req.params));
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
-            if (isBlacklisted || !allowPosts) {
+    app.get('/comments/:postid/after/:after/:token', async (req, res) => {
+        console.log("get comment after called with " + JSON.stringify(req.params));
+        const userStatus = await isUserBlacklisted(req.params.token)
+        if (userStatus == BlackListType.BLOCKED || !allowPosts) {
             console.log("blacklisted get comment after called with " + JSON.stringify(req.params));
             getRecentGibberishComments(req.params.postid, req.params.after)
                 .then(response => {
@@ -249,7 +259,7 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        } else {
+        } else if (userStatus == BlackListType.PERMITTED) {
             getRecentComments(req.params.postid, req.params.after)
                 .then(response => {
                     res.status(200).send(response);
@@ -257,12 +267,15 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        }});
+        } else {
+            res.status(200).send(JSON.stringify([]));
+        }
     })
 
-    app.get('/comment/:id/:token', (req, res) => {
-        isUserBlacklisted(req.params.token).then((isBlacklisted) => {
-            if (isBlacklisted || !allowPosts) {
+    app.get('/comment/:id/:token', async (req, res) => {
+        const isBlacklisted = await isUserBlacklisted(req.params.token);
+
+        if (isBlacklisted == BlackListType.BLOCKED) {
             console.log("blacklisted get comment called with " + JSON.stringify(req.params));
             getCommentGibberish(req.params.id)
                 .then(response => {
@@ -271,7 +284,7 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        } else {
+        } else if (isBlacklisted == BlackListType.PERMITTED) {
             console.log("get comment called with " + JSON.stringify(req.params));
             getComment(req.params.id)
                 .then(response => {
@@ -280,7 +293,9 @@ sectigo.com
                 .catch(error => {
                     res.status(500).send(error);
                 })
-        }});
+        } else {
+            res.status(200).send(JSON.stringify([]));
+        }
     });
 
     app.get('/comment/flag/:id{/:token}', (req, res) => {
@@ -316,6 +331,7 @@ sectigo.com
             res.status(500).send("nope");
         }
 
+
         const json = req.body;
         if (json.comment === undefined || json.name === undefined) {
             console.log("post missing required parameters.");
@@ -330,33 +346,40 @@ sectigo.com
         const now = new Date().getTime();
         const token = json.token
 
-        const blocked = await isUserBlacklisted(token);
-        if (blocked) {
+        const status = await isUserBlacklisted(token);
+        if (status == BlackListType.BLOCKED || status == BlackListType.REQUESTED) {
             res.status(500).send("nope");
             return;
         }
 
-        filterString(name).then((name) => {
-            filterString(original).then((comment) => {
-                if (original == comment) {
-                    original = "";
-                } else {
-                    console.log("comment " + original + " filtered to " + comment);
-                }
 
-                createComment(token, comment, name, postid, parent, original)
-                    .then(response => {
-                        console.log("post comment successful");
-                        res.status(200).send(response);
+        name = await filterString(name)
+        let comment = await filterString(original)
+        if (original == comment) {
+            original = "";
+        } else {
+            console.log("comment " + original + " filtered to " + comment);
+        }
 
-                        MyWebSocket.instance.broadcastNewPost(postid, now);
-                    })
-                    .catch(error => {
-                        console.log("post comment failed with " + JSON.stringify(error));
-                        res.status(500).send(error);
-                    })
-            })
-        })
+        try {
+            const response = await createComment(token, comment, name, postid, parent, original)
+            console.log("post comment successful");
+            res.status(200).send(response);
+
+            MyWebSocket.instance.broadcastNewPost(postid, now);
+
+            const status = await isUserBlacklisted(token);
+            if (status == BlackListType.REQUESTED) {
+                MyWebSocket.instance.sendMessage(token, JSON.stringify({
+                    action: "token",
+                    token: token,
+                    status: status
+                }));
+            }
+        } catch(error) {
+            console.log("post comment failed with " + JSON.stringify(error));
+            res.status(500).send(error);
+        }
     })
 
     app.delete('/comment/:id{/:token}', (req, res) => {
@@ -493,7 +516,25 @@ sectigo.com
         res.status(200).send(auth ? "true" : "false");
     });
 
-    app.get('/userData/:key', (req, res) => {
+    app.get('/userStatus/:id', async (req, res) => {
+        console.log("user status called with " + JSON.stringify(req.params));
+        const id = req.params.id;
+
+        let token = "";
+        let idNum = 0;
+        if (id.indexOf('-') == -1) {
+            idNum = Number.parseInt(id);
+            token = await getUserToken(idNum);
+        } else {
+            token = id;
+        }
+        
+        const status = await isUserBlacklisted(token);
+
+        res.status(200).send("user status for " + idNum + " token " + token + " status: " + status);
+    })
+
+    app.get('/userData{/:key}', async (req, res) => {
         console.log("userData called with " + JSON.stringify(req.params));
         const key = req.params.key;
 
@@ -504,15 +545,9 @@ sectigo.com
         }
 
         const now = new Date().getTime();
-        getRecentUserData(now - 3600 * 8 * 1000)
-            .then(userData => {
-                MyWebSocket.instance.markActiveUsers(userData);
-                res.status(200).send(JSON.stringify(userData));
-            })
-            .catch(error => {
-                console.log("get user data failed with " + JSON.stringify(error));
-                res.status(500).send(error);
-            });
+        const userData = await getRecentUserData(now - 3600 * 8 * 1000)
+        MyWebSocket.instance.markActiveUsers(userData);
+        res.status(200).send(JSON.stringify(userData));
     })
 
     app.get("/allowPosts", (req, res) => {
@@ -607,6 +642,51 @@ sectigo.com
         })
     })
 
+    app.post("/allowUser{/:token}", async (req, res) => {
+        const json = req.body;
+        console.log("allow users called for " + JSON.stringify(json));
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return; 
+        }
+
+        const now = new Date().getTime();
+        const related = await getRelatedUsersAndAddressesByIds([json.id]);
+        console.log("found " + related.length + " related user entries");
+
+        if (related.length == 0) {
+            res.status(500).send();
+            return;
+        }
+
+        const ids:number[] = [];
+        for (let line of related) {
+            ids.push(line.id);
+        }
+        await allowUsers([json.id], json.allow);
+        const status = await isUserBlacklisted(related[0].token);
+
+        const called = new Set<number>()
+        for (let i = 0; i < related.length; i++) {
+            if (!related[i].vblocked && !called.has(related[i].id)) {
+                called.add(related[i].id);
+                MyWebSocket.instance.sendMessage(related[i].token, JSON.stringify({
+                    action: "token",
+                    token: related[i].token,
+                    status: status
+                }));
+                MyWebSocket.instance.sendMessage(related[i].token, JSON.stringify({ action: "refresh" }));
+            }
+        }
+
+        console.log("sending block broadcast");;
+
+        res.status(200).send("success");
+        MyWebSocket.instance.broadcastBlocked(now);
+    })
+
     app.post("/blockUser{/:token}", async (req, res) => {
 
         if (!isAuthorized(req)) {
@@ -669,6 +749,33 @@ sectigo.com
         });
     })
 
+    app.get("/ipDataNames", async (req, res) => {
+        console.log("ipData names called");
+        const ret = {
+            1067: {order: 5, name: "Doormat"},
+            2165: {order: 6, name: "Not a spy"},
+            924: {order: 3, name: "Biff Tannen"},
+            680: {order: 1, name: "Azzbania"},
+            22: {order: 2, name: "Low T crybaby"},
+            13: {order: 4, name: "NWA"},
+            28: {order: 0, name: "Pappy"}
+        }
+
+        res.status(200).send(JSON.stringify(ret));
+    });
+
+    app.get("/ipSync{/:token}", async (req, res) => {
+        console.log("sync ip called");
+
+        if (!isAuthorized(req)) {
+            console.log("auth failed");
+            res.status(401).send();
+            return;
+        }
+
+        await syncIps();
+    })
+
     app.get("/historyParsed.json", async (req, res) => {
         console.log("history-parsed called");
         fs.readFile("./historyParsed.json", { encoding: 'utf8'}, (err, data) => {
@@ -685,7 +792,8 @@ sectigo.com
             country = 'Estonia')
         `,
         "state = 'South Carolina'",
-        "iv.visitorid = 13 or iv.visitorid = 367"
+        "iv.visitorid = 13 or iv.visitorid = 367",
+        "iv.visitorid = 2919"
     ]
 
     app.get("/ip/all{/:token}", async (req, res) => {
@@ -730,7 +838,7 @@ sectigo.com
             }
         }
 
-        const isAuth = isAuthorized(req);
+        const isAuth = true; //isAuthorized(req);
         let ret = await getUserComments(idList, isAuth);
 
         res.status(200).send(JSON.stringify(ret));
@@ -751,13 +859,13 @@ sectigo.com
 
     app.post("/comment/bestOf/:id{/:token}", async (req, res) => {
         console.log("comment best of called for " + req.params.id);
-
+/*
         if (!isAuthorized(req)) {
             console.log("auth failed");
             res.status(401).send();
             return;
         }
-
+*/
         const bestof = req.body.value;
         await markCommentBestOf(req.params.id, bestof);
 

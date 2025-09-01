@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto';
+import env2 from '../env';
+
+const env = (env2.default) ? env2.default : env2;
 
 let key = randomUUID();
 let grants = new Set<string>();
 
 export function resetKey() {
     grants.clear()
-    key = "only Cleopatra died from a snake bite";
+    key = env.adminPassword;
     showKey();
 }
 
@@ -31,7 +34,10 @@ export function showKey() {
 }
 
 export function authorize(requestKey:string):string | null {
-    if (requestKey != key) { return null; }
+    if (requestKey != key) { 
+        console.log("admin request failed with " + requestKey);
+        return null; 
+    }
 
     const ret = randomUUID();
     grants.add(ret);

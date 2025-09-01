@@ -21,7 +21,8 @@ export interface UserData {
     names: string[],
     isActive: boolean
     alias: string,
-    blocked: boolean
+    blocked: boolean,
+    lastComment: {name: string, comment: string}
 }
 
 export interface SubUserData {
@@ -213,6 +214,29 @@ export class AdminTools {
             return;
         } catch (err) {
             console.log("failed to block user " + JSON.stringify(err));
+        }
+    }
+
+    async allowUser(visitorid: number, allowed: boolean) {
+        if (!this.adminToken) {
+            return;
+        }
+
+        try {
+            const body = JSON.stringify({id: visitorid, allow: allowed});
+            const url = env.api + "/allowUser/" + this.adminToken;
+            await fetch(url, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: body
+            });
+
+            return;
+        } catch (err) {
+            console.log("failed to allow user " + JSON.stringify(err));
         }
     }
 }

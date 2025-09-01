@@ -2,7 +2,7 @@ import env2 from '../env';
 import { WebSocketServer } from "ws";
 import { v4 } from "uuid";
 import url from "url";
-import { checkToken, UserData } from './database';
+import { checkToken, UserData, BlackListType, isUserBlacklisted, BlackListTypeString } from './database';
 import { authorize, getGrants, isAuthorized } from './adminKey';
 import { isBlacklisted } from './filter';
 
@@ -14,7 +14,7 @@ interface connectionData {
     token: string | undefined,
     ip: string,
     isAdmin: boolean,
-    isBlacklisted: boolean,
+    isBlacklisted: BlackListType,
 }
 
 export default class MyWebSocket {
@@ -47,7 +47,7 @@ export default class MyWebSocket {
             ip: request.socket.remoteAddress,
             token: undefined,
             isAdmin: false,
-            isBlacklisted: false,
+            isBlacklisted: BlackListType.BLOCKED,
         };
         console.log("connection " + connData.id + " opened");
         this.connections.set(connData.id, connData);
@@ -160,17 +160,10 @@ export default class MyWebSocket {
             checkToken(token, connData.ip).then(async (visitorid) => {
                 connData.token = token;
                 this.tokenIndex.set(token, connData);
+                const userStatus = await isUserBlacklisted(token);
+                console.log("visitor " + visitorid + " logged in with status " + BlackListTypeString.get(userStatus));
 
-                if (visitorid != null) {
-                    connData.isBlacklisted = await isBlacklisted(connData.ip)
-                    if (connData.isBlacklisted) {
-                        console.log("blacklisted visitor " + visitorid + " logged in");
-                    } else {
-                        console.log("visitor " + visitorid + " logged in");
-                    }
-                }
-
-                const message = JSON.stringify({ action: "token", token: token, g: connData.isBlacklisted });
+                const message = JSON.stringify({ action: "token", token: token, status: userStatus });
                 connection.send(message);
 
                 this.sendAdminBroadcast(JSON.stringify({ action: "login", token: token }));
