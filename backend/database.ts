@@ -38,7 +38,7 @@ export const getTopComments = async (postid: number): Promise<any[]> => {
 
 export const getAllComments = async (count: number): Promise<any[]> => {
     try {
-        const res = await pool.query(`${commentQuery} WHERE ORDER BY id DESC LIMIT $1`, [count]);
+        const res = await pool.query(`${commentQuery} ORDER BY id DESC LIMIT $1`, [count]);
         return res.rows;
     } catch (err) {
         console.error(err);
