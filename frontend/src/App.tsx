@@ -397,6 +397,7 @@ function App() {
         appContext.commentBackend?.flagPost(id);
     }
 
+    function tickleAssist() {
         //if (!appContext.adminEnabled) { return; }
         if (!appContext.commentBackend || !appContext.adminBackend) { return; }
         //appContext.commentBackend.adminToken = appContext.adminBackend.adminToken
