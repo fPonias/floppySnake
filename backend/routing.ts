@@ -387,7 +387,7 @@ sectigo.com
             // Selective AI response - higher chance if directly addressed by name
             const botName = getCurrentBotName();
             const mentionsBotByName = botName && comment.toLowerCase().includes(botName.toLowerCase());
-            const responseChance = mentionsBotByName ? 0.85 : 0.40;
+            const responseChance = mentionsBotByName ? 0.85 : 0.70;
             const shouldRespond = Math.random() < responseChance;
             if (shouldRespond) {
                 enqueueAssistResponse(response);

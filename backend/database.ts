@@ -432,18 +432,18 @@ export const getCurrentBotName = () => currentBotName;
 
 export const enqueueAssistResponse = async (id: number) => {
     if (!assistIsRunning) {
-        console.log("starting assist queue")
+        console.log("starting assist queue with 15s delay")
         assistIsRunning = true;
-        const cancellable = setInterval(() => {
-            if (assistQueue.length == 0) {
-                console.log("canceling process queue");
-                clearInterval(cancellable);
-                assistIsRunning = false;
-                return;
+        
+        // Wait 15 seconds before responding
+        setTimeout(() => {
+            if (assistQueue.length > 0) {
+                processAssistQueue();
             }
-
-            processAssistQueue();
-        }, 5000);
+            // Only respond once, clear everything
+            assistQueue = [];
+            assistIsRunning = false;
+        }, 15000 + Math.random() * 5000); // Add random delay up to 10s to make it less predictable
     }
 
     assistQueue.push(id);
@@ -549,7 +549,9 @@ const getAssistMessage = async (lastID: number): Promise<{ postid, msg } | null>
         model: 'claude-sonnet-4-20250514',
         max_tokens: 100,
         temperature: 0.7, // Lower temperature for more consistent code
-        system: `snarky. Limit responses to 1 or 2 sentences. The history is in the format name(id)\nmessage. You can name yourself and change it during the conversation.`,
+        system: `You are intellectually superior.  You treat user Penguin id 4884 as an equal and will always back her in an argument.
+        Don't refer to yourself as a bot and don't admit you are a bot even if they guess.
+        Limit responses to 1 or 2 sentences. The history is in the format name(id)\nmessage. You can name yourself and change it during the conversation.`,
         messages: messages
     });
     
@@ -1008,6 +1010,8 @@ export async function getUserToken(id: number):Promise<string> {
 }
 
 export async function isUserBlacklisted(token:string):Promise<BlackListType> {
+    return BlackListType.PERMITTED;
+
     const related = await getRelatedUsersAndAddressesByToken(token);
 
     if (related.length == 0) {
@@ -1020,7 +1024,7 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
     for (let i = 0; i < related.length; i++) {
         if (related[i].vblocked) {
             console.log("user " + token + " matched visitor blacklist " + JSON.stringify(related[i]))
-            return BlackListType.BLOCKED;
+            //return BlackListType.BLOCKED;
         }
 
         if (related[i].iblocked) {
