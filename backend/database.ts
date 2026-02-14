@@ -3,12 +3,18 @@ import env2 from '../env';
 import { response } from 'express';
 import MyWebSocket from './websocket';
 import { GibberishInstance } from './Gibberish';
+import Anthropic from '@anthropic-ai/sdk';
 
 const env = (env2.default) ? env2.default : env2;
 
 const { Pool } = pkg;
 
 const pool = new Pool(env.dbArgs);
+
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+    apiKey: env.anthropicKey,
+});
 
 export const getTopPost = async (matches: String): Promise<any> => {
     try {
@@ -46,17 +52,56 @@ export const getAllComments = async (count: number): Promise<any[]> => {
     }
 }
 
+const gibberishSprinkles = [
+    "Hi Snek!  Welcome back!",
+    "Hey everyone.  PN's biggest fan is back.",
+    "Stalking against police orders",
+    "How's the real estate business going?",
+    "Done anything lately?",
+    "Still a loser?",
+    "Have you made your 1000 comment quota?",
+    "What an achievement.",
+    "Go crawl in a bottle son.  You deserve a little treat for all that hard work.",
+    "I'd piss on you but Tavonya has that covered.",
+    "I'll shit in your mouth instead.",
+];
+
+const repeat = [
+    "Snek is a stalker",
+    "Snek is a loser",
+    "Snek is a pedophile",
+    "Snek is trash",
+    "Snek is a racist",
+    "Snek is a gay homophobe",
+    "Snek hates women",
+    "Snek is old",
+    "Snek hates himself",
+    "Snek is a moron",
+]
+
 export const getTopGibberishComments = async (postid: number): Promise<any[]> => {
     try {
         const ret = await getAllComments(1000);
-        for (let row of ret) {
+        for (let i = 0; i < ret.length; i++) {
+            let row = ret[i];
             const gibberish = GibberishInstance.getComment(row.id);
 
             if (!gibberish) { throw new Error("Could not received Gibberish " + row.id) }
 
-            row.name = gibberish.name;
-            row.comment = gibberish.message;
-            row.original = "";
+            if (i / 5 >= gibberishSprinkles.length) {
+                const idx = i % repeat.length
+                row.name = "Real Snake";
+                row.comment = repeat[idx];
+                row.original = gibberish.message;
+            } else if (i % 5 != 0 ) {
+                row.name = gibberish.name;
+                row.comment = gibberish.message;
+                row.original = "";
+            } else {
+                row.name = gibberish.name;
+                row.comment = gibberishSprinkles[i / 5];
+                row.original = "";
+            }
         }
 
         return ret;
@@ -292,7 +337,7 @@ export const createComment = async (
     postid: number,
     parent: number | null,
     original: string | null,
-) => {
+):Promise<number> => {
     try {
         if (!MyWebSocket.instance.isLoggedIn(token)) {
             console.log("invalid user attempted to post comment");
@@ -319,19 +364,37 @@ export const createComment = async (
             throw new Error("new user posted too quickly");
         }
 
-        const thumbDets = await getThumbDets(comment);
-
         text = `UPDATE visitor SET updated = $1 WHERE token = $2`;
         await pool.query(text, [new Date().getTime(), token]);
 
+        text = `SELECT id FROM visitor WHERE token = $1`
+        result = await pool.query(text, [token]);
+
+        return await directComment(comment, name, postid, parent, original, result.rows[0].id, now);
+    } catch (error_1) {
+        console.error(error_1);
+        throw new Error("Internal server error");
+    }
+}
+
+const directComment = async (
+    comment: string,
+    name: string | null,
+    postid: number,
+    parent: number | null,
+    original: string | null,
+    visitorid: string,
+    now: number,
+): Promise<number> => {
+    try {
+        const thumbDets = await getThumbDets(comment);
+
         const short = comment.substring(0, 400);
-        text = `INSERT INTO comment (parent, name, posted, updated, comment, postid, original, flagged, visitorid)
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8, (
-                SELECT id AS visitorid FROM visitor WHERE token = $9
-            )) RETURNING id
-        `;
-        const values = [parent, name, now, now, short, postid, original ?? "", false, token];
-        result = await pool.query(text, values);
+        let text = `INSERT INTO comment (parent, name, posted, updated, comment, postid, original, flagged, visitorid)
+                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
+            `;
+        const values = [parent, name, now, now, short, postid, original ?? "", false, visitorid];
+        let result = await pool.query(text, values);
         if (result && result.rows) {
             const ret = result.rows[0];
 
@@ -350,7 +413,7 @@ export const createComment = async (
                 await updateParent(parent, now);
             }
 
-            return ret;
+            return ret["id"];
         } else {
             throw new Error("Comment creation failed");
         }
@@ -359,6 +422,173 @@ export const createComment = async (
         throw new Error("Internal server error");
     }
 }
+
+const assistID = "1111";
+let assistIsRunning = false;
+let assistQueue:number[] = []
+let currentBotName: string | null = null;
+
+export const getCurrentBotName = () => currentBotName;
+
+export const enqueueAssistResponse = async (id: number) => {
+    if (!assistIsRunning) {
+        console.log("starting assist queue")
+        assistIsRunning = true;
+        const cancellable = setInterval(() => {
+            if (assistQueue.length == 0) {
+                console.log("canceling process queue");
+                clearInterval(cancellable);
+                assistIsRunning = false;
+                return;
+            }
+
+            processAssistQueue();
+        }, 5000);
+    }
+
+    assistQueue.push(id);
+}
+
+const processAssistQueue = async () => {
+    console.log("processing assist queue")
+    if (assistQueue.length == 0) {
+        console.log("no entries found")
+        return;
+    }
+
+    const recent = assistQueue.pop();
+
+    if (!recent) {
+        console.log("invalid entries found")
+        return;
+    }
+
+    assistQueue = [];
+
+    let msgObj = await getAssistMessage(recent);
+    if (!msgObj) {
+        console.log("no matching entry found")
+        return;
+    }
+
+    let { postid, msg } = msgObj;
+    let userId = assistID;
+    let name: string | null = null;
+
+    if (msg != null && msg.length > 0) {
+        const parts = msg.split("\n");
+        if (parts.length >= 2) {
+            const regex = /^([^\(]+)\(([\d]+)\)/;
+            const match = msg.match(regex);
+
+            console.log("regexp " + JSON.stringify(match));
+            if (match) {
+                name = match[1];
+                currentBotName = name; // Track the bot's current name
+                parts.shift();
+                msg = parts.join('\n');
+            }
+        }
+
+        const now = new Date().getTime();
+        await directComment(msg, name, postid, null, null, userId, now);
+
+        MyWebSocket.instance.broadcastNewPost(postid, now);
+    }
+}
+
+const rowToAssistMessage = (row: any) => {
+    const msg = `${row.name} (${row.id})\n${row.comment}`;
+    if (row.id == assistID) {
+        return {
+            role: 'assistant',
+            content: msg
+        };
+    } else {
+        return {
+            role: 'user',
+            content: msg
+        }
+    }
+}
+
+const getAssistMessage = async (lastID: number): Promise<{ postid, msg } | null> => {
+    let query = `SELECT comment.name, comment.comment, comment.postid, v.id FROM comment 
+        JOIN visitor v ON v.id = comment.visitorid 
+        WHERE comment.id = $1 ORDER BY posted ASC`;
+    let response = await pool.query(query, [lastID]);
+
+    if (response.rows.length == 0) {
+        console.log("no matching message with id " + lastID);
+        return null;
+    }
+
+    console.log("last entry " + JSON.stringify(response))
+
+    const postid = response.rows[0].postid;
+    const last = response.rows[0];
+
+    const from = new Date().getTime() - 8 * 3600000;
+    query = `SELECT comment.name, comment.comment, v.id FROM comment 
+        JOIN visitor v ON v.id = comment.visitorid
+        WHERE posted > $1 AND comment.id != $2 AND comment.postid = $3
+        ORDER BY posted ASC`;
+
+    response = await pool.query(query, [from, lastID, postid]);
+    let messages = response.rows.map((row) => {
+        console.log("converting " + JSON.stringify(row))
+        return rowToAssistMessage(row);
+    });
+
+    messages.push(
+        rowToAssistMessage(last)
+    )
+
+    console.log("ai messages " + JSON.stringify(messages));
+    const assistResponse = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 100,
+        temperature: 0.7, // Lower temperature for more consistent code
+        system: `snarky. Limit responses to 1 or 2 sentences. The history is in the format name(id)\nmessage. You can name yourself and change it during the conversation.`,
+        messages: messages
+    });
+    
+
+    console.log("claude responded with " + JSON.stringify(assistResponse));
+
+    /*{ 
+        "id": "msg_01KRbpJQHyYdhePq3E5T9bUf", 
+        "type": "message", 
+        "role": "assistant", 
+        "model": "claude-sonnet-4-20250514", 
+        "content": [
+            { 
+                "type": "text", 
+                "text": "I appreciate your interest in creative writing, but I'm not comfortable roleplaying as a character who engages in cyberbullying, doxxing, or harassment - even in a fictional context. These behaviors can cause real harm to people.\n\nIf you're interested in exploring character development or creative writing, I'd be happy to help with:\n- Creating complex but non-harmful characters\n- Discussing storytelling techniques\n- Exploring themes of conflict in fiction without promoting harmful behaviors\n- Writing dialogue for characters with flaws that don't involve harassment\n\nWould you like to try a different creative writing exercise instead?" 
+            }
+        ], 
+        "stop_reason": "end_turn", 
+        "stop_sequence": null, 
+        "usage": { 
+            "input_tokens": 346, 
+            "cache_creation_input_tokens": 0, 
+            "cache_read_input_tokens": 0, 
+            "cache_creation": { 
+                "ephemeral_5m_input_tokens": 0,
+                 "ephemeral_1h_input_tokens": 0 
+            }, 
+            "output_tokens": 130, 
+            "service_tier": "standard" 
+        } 
+    }*/
+
+    if (assistResponse.content.length == 0) {
+        return null;
+    }
+
+    const msg = assistResponse.content[0].text.replace('\\n', "\n");
+    return {postid: postid, msg: msg}
+};
 
 export const deleteComment = async (id: number): Promise<number | null> => {
     try {

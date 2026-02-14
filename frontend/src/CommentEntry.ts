@@ -156,7 +156,7 @@ export class CommentEntries {
 
     async getCounts() {
         try {
-            const url = env.api + "/comments/" + this.postid + "/count";
+            const url = env.api + "/comments/" + this.postid + "/count/" + this.apiToken;
             const json = await fetch(url);
             const obj = await this.parseCounts(json);
 
@@ -309,6 +309,17 @@ export class CommentEntries {
             });
         } catch (err) {
             console.log("failed to flag post entry " + JSON.stringify(err));
+        }
+    }
+
+    async tickleAssist() {
+        try {
+            const url = env.api + "/assist/tickle/" + this.adminToken;
+            await fetch(url, {
+                credentials: "include"
+            })
+        } catch (err) {
+            console.log("failed to tickle assistant " + JSON.stringify(err));
         }
     }
 }

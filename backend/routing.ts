@@ -35,6 +35,8 @@ import {
     markCommentBestOf,
     syncIps,
     getUserToken,
+    enqueueAssistResponse,
+    getCurrentBotName,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -190,7 +192,7 @@ sectigo.com
         const isBlacklisted = await isUserBlacklisted(req.params.token);
         if (isBlacklisted == BlackListType.BLOCKED || !allowPosts) {
             console.log("blacklisted get comments called with " + JSON.stringify(req.params));
-            const count = Math.round((Math.random() - 0.5) * 500 + 1000);
+            const count = 1001;
             getTopGibberishComments(count)
                 .then(response => {
                     res.status(200).send(response);
@@ -236,15 +238,20 @@ sectigo.com
         }
     });
 
-    app.get('/comments/:postid/count', (req, res) => {
+    app.get('/comments/:postid/count/:token', async (req, res) => {
         console.log("get comment count called");
-        getCommentCount(req.params.postid)
-            .then(response => {
-                res.status(200).send(response);
-            })
-            .catch(error => {
-                res.status(500).send(error);
-            })
+        const isBlacklisted = await isUserBlacklisted(req.params.token);
+        if (isBlacklisted == BlackListType.BLOCKED || !allowPosts) {
+            res.status(200).send(`{"count": 1001, "min": 0}`)
+        } else {
+            getCommentCount(req.params.postid)
+                .then(response => {
+                    res.status(200).send(response);
+                })
+                .catch(error => {
+                    res.status(500).send(error);
+                })
+        }
     })
 
     app.get('/comments/:postid/after/:after/:token', async (req, res) => {
@@ -376,10 +383,33 @@ sectigo.com
                     status: status
                 }));
             }
+
+            // Selective AI response - higher chance if directly addressed by name
+            const botName = getCurrentBotName();
+            const mentionsBotByName = botName && comment.toLowerCase().includes(botName.toLowerCase());
+            const responseChance = mentionsBotByName ? 0.85 : 0.40;
+            const shouldRespond = Math.random() < responseChance;
+            if (shouldRespond) {
+                enqueueAssistResponse(response);
+            }
         } catch(error) {
             console.log("post comment failed with " + JSON.stringify(error));
             res.status(500).send(error);
         }
+    })
+
+    app.get('/assist/tickle{/:token}', (req, res) => {
+        console.log("assistance tickle called");
+
+        /*if (!isAuthorized(req)) {
+            console.log("auth failed for tickle action");
+            res.status(401).send();
+            return;
+        }*/
+
+        //enqueueAssistResponse()
+
+        res.status(200).send();
     })
 
     app.delete('/comment/:id{/:token}', (req, res) => {
