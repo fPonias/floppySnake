@@ -36,7 +36,6 @@ import {
     syncIps,
     getUserToken,
     enqueueAssistResponse,
-    getCurrentBotName,
 } from './database';
 import MyWebSocket from './websocket'; 
 import env2 from '../env';
@@ -384,10 +383,8 @@ sectigo.com
                 }));
             }
 
-            // Selective AI response - higher chance if directly addressed by name
-            const botName = getCurrentBotName();
-            const mentionsBotByName = botName && comment.toLowerCase().includes(botName.toLowerCase());
-            const responseChance = mentionsBotByName ? 0.85 : 0.70;
+            // Selective AI response - higher chance if directly addressed by either bot's name
+            const responseChance = 0.70;
             const shouldRespond = Math.random() < responseChance;
             if (shouldRespond) {
                 enqueueAssistResponse(response);
@@ -407,7 +404,7 @@ sectigo.com
             return;
         }*/
 
-        //enqueueAssistResponse()
+        enqueueAssistResponse()
 
         res.status(200).send();
     })
