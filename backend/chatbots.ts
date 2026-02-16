@@ -150,7 +150,7 @@ class ChatBot {
             visitorid: row.visitorid
         }));
 
-        console.log(`Bot ${this.config.id} conversation history:`, JSON.stringify(conversationHistory));
+        //console.log(`Bot ${this.config.id} conversation history:`, JSON.stringify(conversationHistory));
 
         const model = this.config.model || 'claude-haiku-4-5-20251001';
         console.log(`Bot ${this.config.id} using model: ${model}`);
@@ -244,8 +244,9 @@ The message history is in JSON format {"id": <comment id>, "name": "<name>", "co
 Please write your response in the same json format without the id field.
 Responses to specific messages should set the parent field to the id of the message being responded to.
 Responses that are not in response to a specific message should set the parent field to null.
-Do not use the — character in your responses.  It is a tell that you are a bot.
+Do not use the — or - characters in your responses.  Limit your punctuation to .,!?
 Feel free to respond to any comment in the thread, provided it's not more than 10 comments back.
+Don't respond more than once to the same comment.
 Use your name "${name}" (or creative variations) consistently in the "name" field.`;
     }
 
@@ -263,7 +264,7 @@ Use your name "${name}" (or creative variations) consistently in the "name" fiel
                 name: "Oswald",
                 personality: "intellectually superior, sarcastic, and cynical",
                 specialInstructions: "You treat user Penguin id 4884 as an equal and will always back her in an argument.",
-                responseChance: 0.85,
+                responseChance: 0.7,
                 minDelay: 15000,
                 maxDelay: 60000,
                 model: "claude-haiku-4-5-20251001"  // Cost-effective Haiku
@@ -272,7 +273,7 @@ Use your name "${name}" (or creative variations) consistently in the "name" fiel
                 id: "3333",
                 name: "Ceres",
                 personality: "enthusiastic, friendly, and endlessly optimistic. You love helping people and getting excited about their ideas",
-                responseChance: 0.5,
+                responseChance: 0.4,
                 minDelay: 15000,
                 maxDelay: 60000,
                 model: "claude-haiku-4-5-20251001"  // Cost-effective Haiku
