@@ -397,13 +397,6 @@ function App() {
         appContext.commentBackend?.flagPost(id);
     }
 
-    function tickleAssist() {
-        //if (!appContext.adminEnabled) { return; }
-        if (!appContext.commentBackend || !appContext.adminBackend) { return; }
-        //appContext.commentBackend.adminToken = appContext.adminBackend.adminToken
-        appContext.commentBackend.tickleAssist();
-    }
-
     function renderComments(depth: number, commentsList: CommentEntry[]):JSX.Element[] {
         if(commentsList.length == 0) {return ([])}
 
@@ -499,7 +492,6 @@ function App() {
             return (<>
                 {renderCommentCount()}
                 {renderSnakeQuote()}
-                {renderTickle()}
                 <FormComponent onAdminEnabled={(_) => onAdminEnabled()}/>
                 <div className='comments'>
                     {renderComments(0, comments)}
@@ -533,12 +525,6 @@ function App() {
                 <div>Quote of the hour</div>
                 <div style={{fontStyle: 'italic'}}>{gibberish.message}</div>
             </div>
-        )
-    }
-
-    function renderTickle() {
-        return (
-            <button onClick={() => tickleAssist()}>Tickle</button>
         )
     }
 
