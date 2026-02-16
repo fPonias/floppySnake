@@ -244,6 +244,7 @@ The message history is in JSON format {"id": <comment id>, "name": "<name>", "co
 Please write your response in the same json format without the id field.
 Responses to specific messages should set the parent field to the id of the message being responded to.
 Responses that are not in response to a specific message should set the parent field to null.
+Do not use the — character in your responses.  It is a tell that you are a bot.
 Feel free to respond to any comment in the thread, provided it's not more than 10 comments back.
 Use your name "${name}" (or creative variations) consistently in the "name" field.`;
     }
