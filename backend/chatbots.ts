@@ -131,24 +131,33 @@ class ChatBot {
 
         // Get all recent messages in the thread with their IDs and parents
         const query = `SELECT comment.id, comment.name, comment.comment,
-                comment.parent, v.id as visitorid, comment.postid
+                comment.parent, v.id as visitorid, comment.postid,
+				c.cnt
             FROM comment
+			LEFT OUTER JOIN (SELECT COUNT(id) cnt, visitorid, parent FROM (
+				SELECT id, visitorid, parent FROM comment 
+				WHERE visitorid = $1 AND parent IS NOT null
+				) GROUP BY parent, visitorid) c on c.parent = comment.id
             JOIN visitor v ON v.id = comment.visitorid
-            WHERE posted > $1
-            ORDER BY posted ASC
-            LIMIT 100`;
+            WHERE posted > $2
+            ORDER BY posted DESC
+            LIMIT 100`
 
-        const response = await this.pool.query(query, [from]);
+        const response = await this.pool.query(query, [this.config.id, from]);
 
         const postid = response.rows.length > 0 ? response.rows[response.rows.length - 1].postid : 0;
 
+        // Annotate comments with already_responded flag instead of filtering
         const conversationHistory = response.rows.map((row: any) => ({
             id: row.id,
             name: row.name,
             comment: row.comment,
             parent: row.parent,
-            visitorid: row.visitorid
+            visitorid: row.visitorid,
+            already_responded: row.cnt > 0
         }));
+
+        console.log(`Conversation history contains ${conversationHistory.length} total comments`);
 
         //console.log(`Bot ${this.config.id} conversation history:`, JSON.stringify(conversationHistory));
 
@@ -191,6 +200,12 @@ class ChatBot {
             responseText = responseText.trim();
 
             assistMessage = JSON.parse(responseText);
+
+            // If bot returned an array instead of a single object, take the first element
+            if (Array.isArray(assistMessage)) {
+                console.log(`Bot ${this.config.id} returned array instead of single object, taking first element`);
+                assistMessage = assistMessage[0];
+            }
         } catch (error) {
             console.error(`Bot ${this.config.id} failed to parse Claude response:`, error);
             console.error('Raw response:', content[0].type === 'text' ? content[0].text : 'No text content');
@@ -198,7 +213,7 @@ class ChatBot {
         }
 
         // Validate response structure
-        if (!assistMessage.name || !assistMessage.comment) {
+        if (!assistMessage || !assistMessage.name || !assistMessage.comment) {
             console.error(`Bot ${this.config.id} invalid response structure:`, assistMessage);
             return null;
         }
@@ -240,13 +255,16 @@ class ChatBotManager {
 ${special}Don't refer to yourself as a bot and don't admit you are a bot even if they guess.
 Your name is ${name} (or creative variations) - stick to this identity.
 Limit responses to 1 or 2 sentences.
-The message history is in JSON format {"id": <comment id>, "name": "<name>", "comment": "<comment>", "parent": <parent comment id>, "visitorid": <visitor id>}
-Please write your response in the same json format without the id field.
+The message history is in JSON format {"id": <comment id>, "name": "<name>", "comment": "<comment>", "parent": <parent comment id>, "visitorid": <visitor id>, "already_responded": <true/false>}
+Comments in the history have an "already_responded" field:
+- already_responded: false = Fresh comment you haven't replied to yet
+- already_responded: true = You've already responded to this, DO NOT respond again
+IMPORTANT: Only respond to comments where already_responded is FALSE. Pick ONE of the most recent comments with already_responded: false and respond to it.
+Generate exactly ONE response as a single JSON object (NOT an array): {"name": "${name}", "comment": "your response", "parent": <id or null>}
+Do NOT return an array of responses. Return only a single JSON object.
 Responses to specific messages should set the parent field to the id of the message being responded to.
 Responses that are not in response to a specific message should set the parent field to null.
 Do not use the — or - characters in your responses.  Limit your punctuation to .,!?
-Feel free to respond to any comment in the thread, provided it's not more than 10 comments back.
-Don't respond more than once to the same comment.
 Use your name "${name}" (or creative variations) consistently in the "name" field.`;
     }
 
