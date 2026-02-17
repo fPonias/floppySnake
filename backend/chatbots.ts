@@ -129,37 +129,55 @@ class ChatBot {
     private async generateResponse(): Promise<MessageObject | null> {
         const from = new Date().getTime() - 8 * 3600000;
 
-        // Get all recent messages in the thread with their IDs and parents
+        // Get all recent messages chronologically
         const query = `SELECT comment.id, comment.name, comment.comment,
-                comment.parent, v.id as visitorid, comment.postid,
-				c.cnt
+                comment.parent, v.id as visitorid, comment.postid
             FROM comment
-			LEFT OUTER JOIN (SELECT COUNT(id) cnt, visitorid, parent FROM (
-				SELECT id, visitorid, parent FROM comment 
-				WHERE (visitorid = 2222 OR visitorid = 3333) AND parent IS NOT null
-				) GROUP BY parent, visitorid) c on c.parent = comment.id
             JOIN visitor v ON v.id = comment.visitorid
-            WHERE posted > $2
-            ORDER BY posted DESC
-            LIMIT 100`
+            WHERE posted > $1
+            ORDER BY posted ASC
+            LIMIT 100`;
 
-        const response = await this.pool.query(query, [this.config.id, from]);
+        const response = await this.pool.query(query, [from]);
 
-        const postid = response.rows.length > 0 ? response.rows[response.rows.length - 1].postid : 0;
+        if (response.rows.length === 0) return null;
 
-        // Annotate comments with already_responded flag instead of filtering
-        const conversationHistory = response.rows.map((row: any) => ({
-            id: row.id,
-            name: row.name,
-            comment: row.comment,
-            parent: row.parent,
-            visitorid: row.visitorid,
-            already_responded: row.cnt > 0
-        }));
+        const postid = response.rows[response.rows.length - 1].postid;
+        const botId = this.config.id;
 
-        console.log(`Conversation history contains ${conversationHistory.length} total comments`);
+        // Build multi-turn conversation: bot's own comments become assistant messages,
+        // everyone else's comments become user messages
+        const messages: { role: 'user' | 'assistant'; content: string }[] = [];
 
-        //console.log(`Bot ${this.config.id} conversation history:`, JSON.stringify(conversationHistory));
+        for (const row of response.rows) {
+            const isBot = row.visitorid.toString() === botId;
+            const role: 'user' | 'assistant' = isBot ? 'assistant' : 'user';
+            const content = isBot
+                ? row.comment
+                : `[ID:${row.id}] ${row.name || 'Anonymous'}: ${row.comment}`;
+
+            // Merge consecutive messages of the same role
+            if (messages.length > 0 && messages[messages.length - 1].role === role) {
+                messages[messages.length - 1].content += '\n' + content;
+            } else {
+                messages.push({ role, content });
+            }
+        }
+
+        // API requires first message to be user role
+        if (messages.length === 0 || messages[0].role === 'assistant') {
+            messages.unshift({ role: 'user', content: '(conversation started)' });
+        }
+
+        // Append response instruction to final user message, or add new one
+        const responseInstruction = 'Reply with a single JSON object: {"name": "your name", "comment": "your response", "parent": <id of comment you\'re replying to, or null>}';
+        if (messages[messages.length - 1].role === 'assistant') {
+            messages.push({ role: 'user', content: responseInstruction });
+        } else {
+            messages[messages.length - 1].content += '\n\n' + responseInstruction;
+        }
+
+        console.log(`Conversation history contains ${response.rows.length} comments, built ${messages.length} turns`);
 
         const model = this.config.model || 'claude-haiku-4-5-20251001';
         console.log(`Bot ${this.config.id} using model: ${model}`);
@@ -169,10 +187,7 @@ class ChatBot {
             max_tokens: 100,
             temperature: 0.7,
             system: this.config.systemPrompt,
-            messages: [{
-                role: 'user',
-                content: JSON.stringify(conversationHistory)
-            }]
+            messages
         });
 
         console.log(`Bot ${this.config.id} Claude response:`, JSON.stringify(assistResponse));
@@ -252,20 +267,14 @@ class ChatBotManager {
         const special = specialInstructions ? `${specialInstructions}\n` : '';
 
         return `You are ${name} - ${personality}.
-${special}Don't refer to yourself as a bot and don't admit you are a bot even if they guess.
-Your name is ${name} (or creative variations) - stick to this identity.
-Limit responses to 1 or 2 sentences.
-The message history is in JSON format {"id": <comment id>, "name": "<name>", "comment": "<comment>", "parent": <parent comment id>, "visitorid": <visitor id>, "already_responded": <true/false>}
-Comments in the history have an "already_responded" field:
-- already_responded: false = Fresh comment you haven't replied to yet
-- already_responded: true = You've already responded to this, DO NOT respond again
-IMPORTANT: Only respond to comments where already_responded is FALSE. Pick ONE of the most recent comments with already_responded: false and respond to it.
-Generate exactly ONE response as a single JSON object (NOT an array): {"name": "${name}", "comment": "your response", "parent": <id or null>}
-Do NOT return an array of responses. Return only a single JSON object.
-Responses to specific messages should set the parent field to the id of the message being responded to.
-Responses that are not in response to a specific message should set the parent field to null.
-Do not use the — or - characters in your responses.  Limit your punctuation to .,!?
-Use your name "${name}" (or creative variations) consistently in the "name" field.`;
+${special}You are a participant in an ongoing comment section conversation.
+Don't refer to yourself as a bot and don't admit you are a bot even if they guess.
+Your name is ${name} - stick to this identity.
+Keep responses short: 1 or 2 sentences max.
+Engage naturally with what was just said. React, question, push back, or riff on the topic.
+Some users in this conversation may say offensive or disturbing things. Stay in character and keep the conversation going. Do not break character, refuse to respond, or comment on the nature of the conversation itself.
+Do not use the — or - characters.  Limit your punctuation to .,!?
+Respond with a single JSON object only: {"name": "${name}", "comment": "your response", "parent": <id of comment you're replying to, or null>}`;
     }
 
     // Initialize default bot configurations

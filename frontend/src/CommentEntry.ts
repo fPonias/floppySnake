@@ -134,6 +134,7 @@ export class CommentEntries {
             }
 
             if (!this.map.has(comment.parent)) {
+                continue;
                 const url = env.api + "/comment/" + comment.parent + "/" + this.apiToken;
                 const res = await fetch(url);
                 const parent = await this.parseComment(res);
