@@ -136,7 +136,7 @@ class ChatBot {
             FROM comment
 			LEFT OUTER JOIN (SELECT COUNT(id) cnt, visitorid, parent FROM (
 				SELECT id, visitorid, parent FROM comment 
-				WHERE visitorid = $1 AND parent IS NOT null
+				WHERE (visitorid = 2222 OR visitorid = 3333) AND parent IS NOT null
 				) GROUP BY parent, visitorid) c on c.parent = comment.id
             JOIN visitor v ON v.id = comment.visitorid
             WHERE posted > $2
