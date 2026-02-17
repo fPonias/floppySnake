@@ -849,7 +849,7 @@ export async function getUserToken(id: number):Promise<string> {
 }
 
 export async function isUserBlacklisted(token:string):Promise<BlackListType> {
-    return BlackListType.PERMITTED;
+    //return BlackListType.PERMITTED;
 
     const related = await getRelatedUsersAndAddressesByToken(token);
 
