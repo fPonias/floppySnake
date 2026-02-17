@@ -889,7 +889,7 @@ export async function isUserBlacklisted(token:string):Promise<BlackListType> {
         return BlackListType.NEW_USER;
     } 
     
-    console.log("visitor " + related[0].origid + " has " + count + " related posts");
+    console.log("visitor (allowed: " + allowed + ") " + related[0].origid + " has " + count + " related posts");
     if (count == 1 && !allowed) {
         return BlackListType.REQUESTED;
     } else if (!allowed) {

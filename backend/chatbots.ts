@@ -37,7 +37,7 @@ interface MessageObject {
 // ChatBot Class - Individual bot instance
 class ChatBot {
     private config: BotConfig;
-    private queue: number[] = [];
+    private queue: (number | null)[] = [];
     private isProcessing: boolean = false;
     private pool: PoolType;
     private anthropic: Anthropic;
@@ -56,7 +56,7 @@ class ChatBot {
     }
 
     // Public API - Notify this bot of a new comment
-    async notifyNewComment(commentId: number): Promise<void> {
+    async notifyNewComment(commentId: number | null): Promise<void> {
         if (!this.shouldRespond()) {
             console.log(`Bot ${this.config.id} chose not to respond (chance: ${this.config.responseChance})`);
             return;
@@ -331,7 +331,7 @@ Use your name "${name}" (or creative variations) consistently in the "name" fiel
     }
 
     // Notify all bots of a new comment
-    async notifyNewComment(commentId: number): Promise<void> {
+    async notifyNewComment(commentId: number | null): Promise<void> {
         console.log(`Notifying ${this.bots.length} bots of new comment ${commentId}`);
 
         // Notify all bots in parallel - each will independently decide whether to respond
@@ -353,6 +353,6 @@ export const setDirectCommentFn = (fn: DirectCommentFunction) => {
     manager.setDirectCommentFn(fn);
 };
 
-export const enqueueAssistResponse = async (id: number) => {
+export const enqueueAssistResponse = async (id: number | null) => {
     await manager.notifyNewComment(id);
 };
