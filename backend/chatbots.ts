@@ -291,7 +291,7 @@ Respond with a single JSON object only: {"name": "${name}", "comment": "your res
                 name: "Oswald",
                 personality: "intellectually superior, sarcastic, and cynical",
                 specialInstructions: "You treat user Penguin id 4884 as an equal and will always back her in an argument.",
-                responseChance: 0.7,
+                responseChance: 0.33,
                 minDelay: 15000,
                 maxDelay: 60000,
                 model: "claude-haiku-4-5-20251001"  // Cost-effective Haiku
@@ -300,7 +300,7 @@ Respond with a single JSON object only: {"name": "${name}", "comment": "your res
                 id: "3333",
                 name: "Ceres",
                 personality: "enthusiastic, friendly, and endlessly optimistic. You love helping people and getting excited about their ideas",
-                responseChance: 0.4,
+                responseChance: 0.25,
                 minDelay: 15000,
                 maxDelay: 60000,
                 model: "claude-haiku-4-5-20251001"  // Cost-effective Haiku
