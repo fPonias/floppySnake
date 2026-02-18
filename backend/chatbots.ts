@@ -99,8 +99,24 @@ class ChatBot {
                 console.log(`Bot ${this.config.id} waiting ${Math.round(delay)}ms before responding`);
                 await new Promise(resolve => setTimeout(resolve, delay));
 
-                // Generate and post response
-                const msgObj = await this.generateResponse();
+                // Generate and post response, with retry on overload
+                let msgObj = null;
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        msgObj = await this.generateResponse();
+                        break;
+                    } catch (error: any) {
+                        const retryable = error?.status === 529 || error?.status === 429;
+                        if (retryable && attempt < 2) {
+                            const retryDelay = Math.pow(2, attempt) * 5000; // 5s, 10s
+                            console.log(`Bot ${this.config.id} API overloaded, retrying in ${retryDelay}ms`);
+                            await new Promise(resolve => setTimeout(resolve, retryDelay));
+                        } else {
+                            console.error(`Bot ${this.config.id} API error:`, error?.message || error);
+                            break;
+                        }
+                    }
+                }
                 if (!msgObj) {
                     console.log(`Bot ${this.config.id}: no response generated`);
                     continue;
